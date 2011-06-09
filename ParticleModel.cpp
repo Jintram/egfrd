@@ -14,9 +14,10 @@ ParticleModel::ParticleModel()
 {
 }
 
-ParticleModel::~ParticleModel()
-{
-}
+// attempt to fix memory leak ~MW
+//ParticleModel::~ParticleModel()
+//{
+//}
 
 void ParticleModel::add_structure_type(boost::shared_ptr<structure_type_type> const& structure)
 {

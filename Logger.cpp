@@ -141,9 +141,10 @@ char const* Logger::stringize_error_level(enum level lv)
     return static_cast<std::size_t>(lv) >= sizeof(names) / sizeof(*names) ? "???": names[lv];
 }
 
-Logger::~Logger()
-{
-}
+// attempt to fix leak ~MW
+// Logger::~Logger()
+// {
+// }
 
 struct invoke_appender
 {
@@ -257,4 +258,5 @@ void LoggerManager::manage(Logger* logger)
     /* }} */
 }
 
-LogAppender::~LogAppender() {}
+// attempt to fix leak ~MW
+// LogAppender::~LogAppender() {}

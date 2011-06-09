@@ -4,6 +4,7 @@
 
 #include "GreensFunction3DRadAbsBase.hpp"
 
-GreensFunction3DRadAbsBase::~GreensFunction3DRadAbsBase()
-{
-}
+// attempt to fix memory leak ~MW
+//GreensFunction3DRadAbsBase::~GreensFunction3DRadAbsBase()
+//{
+//}

@@ -35,10 +35,11 @@ GF3DA::GreensFunction3DAbs(Real D, Real r0, Real a)
     }
 }
 
-GF3DA::~GreensFunction3DAbs()
-{
-    ; // do nothing
-}
+// attempt to fix memory leak ~MW
+// GF3DA::~GreensFunction3DAbs()
+// {
+//     ; // do nothing
+// }
 
 Real
 GF3DA::p_survival(Real t) const

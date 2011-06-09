@@ -7,7 +7,8 @@
 
 #include "ConsoleAppender.hpp"
 
-ConsoleAppender::~ConsoleAppender() {}
+// attempt to fix memory leak ~MW
+// ConsoleAppender::~ConsoleAppender() {}
 
 void ConsoleAppender::operator()(enum Logger::level lv, char const* name, char const** chunks)
 {

@@ -10,10 +10,15 @@
 #include "freeFunctions.hpp"
 #include "GreensFunction3D.hpp"
 
-GreensFunction3D::~GreensFunction3D()
-{
-    ; // do nothing
-}
+// Attempt to find memory leak 
+// Why would there be an empty destructor?
+// Commented out.
+// ~MW
+
+//GreensFunction3D::~GreensFunction3D()
+//{
+//    ; // do nothing
+//}
     
 Real GreensFunction3D::drawTime(Real rnd) const
 {

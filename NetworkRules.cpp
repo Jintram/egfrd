@@ -4,6 +4,7 @@
 
 #include "NetworkRules.hpp"
 
-NetworkRules::~NetworkRules()
-{
-}
+// attempt to fix memory leak ~MW
+// NetworkRules::~NetworkRules()
+// {
+// }

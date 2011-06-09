@@ -17,9 +17,10 @@ Model::Model(): network_rules_(new BasicNetworkRulesImpl())
 {
 }
 
-Model::~Model()
-{
-}
+// attempt to fix leak ~MW
+// Model::~Model()
+// {
+// }
 
 void Model::add_species_type(boost::shared_ptr<species_type_type> const& species)
 {

@@ -33,10 +33,10 @@ username = 'wehrens'
 outFilename = 'anotherreport.txt'
 
 # runs
-runs = 100
+runs = 1
 
 # Clustersize
-N = 50
+N = 10
 
 # Initializing
 # ===============================

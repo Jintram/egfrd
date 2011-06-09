@@ -46,10 +46,11 @@ GreensFunction3DRadAbs::GreensFunction3DRadAbs(
     clearAlphaTable();
 }
 
-GreensFunction3DRadAbs::~GreensFunction3DRadAbs()
-{
-    ; // do nothing
-}
+// attempt to fix leak ~MW
+// GreensFunction3DRadAbs::~GreensFunction3DRadAbs()
+// {
+//    ; // do nothing
+// }
 
 //
 // Alpha-related methods

@@ -8,9 +8,11 @@
 #include "generator.hpp"
 #include "BasicNetworkRulesImpl.hpp"
 
-BasicNetworkRulesImpl::~BasicNetworkRulesImpl()
-{
-}
+// attempt to fix memory leak
+//BasicNetworkRulesImpl::~BasicNetworkRulesImpl()
+//{
+//}
+//~MW
 
 BasicNetworkRulesImpl::BasicNetworkRulesImpl()
 {
