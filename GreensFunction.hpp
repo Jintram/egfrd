@@ -16,7 +16,7 @@ public:
     GreensFunction( const Real D )
       : D( D ) {}
   
-    ~GreensFunction() {}
+    virtual ~GreensFunction() {}
   
     Real getD() const
     {

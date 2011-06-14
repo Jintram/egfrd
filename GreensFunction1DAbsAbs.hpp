@@ -57,7 +57,7 @@ public:
 	;   // do nothing
     }
 
-    ~GreensFunction1DAbsAbs()
+    virtual ~GreensFunction1DAbsAbs()
     { 
 	;   // empty
     }

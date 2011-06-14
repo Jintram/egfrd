@@ -54,7 +54,7 @@ public:
 	// do nothing
     }
 
-    ~GreensFunction1DRadAbs()
+    virtual ~GreensFunction1DRadAbs()
     {
 	;   // empty
     }

@@ -33,7 +33,7 @@ public:
     }
     
     
-    ~GreensFunction3DSym()
+    virtual ~GreensFunction3DSym()
     {
         ; // do nothing
     }
