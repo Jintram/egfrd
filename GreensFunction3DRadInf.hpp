@@ -37,7 +37,7 @@ public:
     
     GreensFunction3DRadInf(Real D, Real kf, Real r0, Real Sigma);
 
-    virtual ~GreensFunction3DRadInf();
+//    virtual ~GreensFunction3DRadInf(); End of bloodline ~MW
  
     virtual Real drawTime(Real rnd) const;
     

@@ -54,10 +54,12 @@ public:
 	// do nothing
     }
 
+/* End bloodline ~MW
     virtual ~GreensFunction1DRadAbs()
     {
 	;   // empty
     }
+*/
 
     // This also sets the scale
     void seta(Real a)

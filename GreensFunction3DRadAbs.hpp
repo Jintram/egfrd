@@ -34,8 +34,8 @@ private:
 public:
     
     GreensFunction3DRadAbs(Real D, Real kf, Real r0, Real Sigma, Real a);
-    
-    virtual ~GreensFunction3DRadAbs();
+
+//    virtual ~GreensFunction3DRadAbs(); End of bloodline ~MW
 
     Real geth() const
     {

@@ -46,10 +46,12 @@ GreensFunction3DRadAbs::GreensFunction3DRadAbs(
     clearAlphaTable();
 }
 
+/* End of bloodline ~MW
 GreensFunction3DRadAbs::~GreensFunction3DRadAbs()
 {
     ; // do nothing
 }
+*/
 
 //
 // Alpha-related methods

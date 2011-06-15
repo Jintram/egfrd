@@ -35,10 +35,12 @@ GF3DA::GreensFunction3DAbs(Real D, Real r0, Real a)
     }
 }
 
+/* End of bloodline ~MW
 GF3DA::~GreensFunction3DAbs()
 {
     ; // do nothing
 }
+*/
 
 Real
 GF3DA::p_survival(Real t) const

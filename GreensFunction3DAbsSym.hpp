@@ -12,7 +12,7 @@ public:
     GreensFunction3DAbsSym(Real D, Real a)
         : GreensFunction(D), a(a) {}
 
-    virtual ~GreensFunction3DAbsSym() {}
+//    virtual ~GreensFunction3DAbsSym() {}
 
     Real getD() const
     {

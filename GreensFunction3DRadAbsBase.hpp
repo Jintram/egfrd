@@ -9,7 +9,7 @@ public:
     GreensFunction3DRadAbsBase(Real D, Real kf, Real r0, Real Sigma)
         : PairGreensFunction(D, kf, r0, Sigma) {}
 
-    virtual ~GreensFunction3DRadAbsBase();
+    virtual ~GreensFunction3DRadAbsBase() = 0;
 
     virtual Real drawTime(Real rnd) const = 0;
 

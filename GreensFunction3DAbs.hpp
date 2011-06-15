@@ -34,7 +34,7 @@ public:
     
     GreensFunction3DAbs(Real D, Real r0, Real a); 
     
-    virtual ~GreensFunction3DAbs();
+//    virtual ~GreensFunction3DAbs(); End of bloodline ~MW
 
     Real geta() const
     {

@@ -16,7 +16,9 @@ public:
     GreensFunction( const Real D )
       : D( D ) {}
   
-    virtual ~GreensFunction() {}
+    // needs virtual because of inheritance
+    // made abstract because functions only as base
+    virtual ~GreensFunction() = 0;
   
     Real getD() const
     {

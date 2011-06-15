@@ -32,11 +32,13 @@ public:
         ; // do nothing
     }
     
-    
+
+/* End of bloodline    
     virtual ~GreensFunction3DSym()
     {
         ; // do nothing
     }
+*/
 
     Real drawTime( const Real ) const
     {

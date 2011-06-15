@@ -38,10 +38,12 @@ GreensFunction3DRadInf::GreensFunction3DRadInf(Real D, Real kf, Real r0, Real Si
     ; // do nothing
 }
 
+/* End of bloodline ~MW
 GreensFunction3DRadInf::~GreensFunction3DRadInf()
 {
     ; // do nothing
 }
+*/
 
 Real 
 GreensFunction3DRadInf::p_corr_R(Real alpha, unsigned int n, Real r, Real t) const

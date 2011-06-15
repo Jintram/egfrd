@@ -33,7 +33,7 @@ public:
     }
     
     
-    virtual ~GreensFunction3D();
+//    virtual ~GreensFunction3D(); ~MW end of bloodline
     
     virtual Real drawTime(Real rnd) const;
 

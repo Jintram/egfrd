@@ -10,10 +10,12 @@
 #include "freeFunctions.hpp"
 #include "GreensFunction3D.hpp"
 
+/* End of bloodline ~MW
 GreensFunction3D::~GreensFunction3D()
 {
     ; // do nothing
 }
+*/
     
 Real GreensFunction3D::drawTime(Real rnd) const
 {
