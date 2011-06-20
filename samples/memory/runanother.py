@@ -2,14 +2,18 @@
 
 # Modules
 # ===============================
+import gc
 import sys
 #Also, set relative python path
 sys.path.append('../../')
 import os
 sys.path.append('/storage1/wehrens/lib/python/')
 sys.path.append('/storage1/wehrens/lib/python2.6/site-packages')
-import guppy
-import gc
+
+# GUPPY
+from guppy import hpy
+
+# DOZER
 from dozer import Dozer
 
 #from memorymonitor import MemoryMonitor
@@ -42,11 +46,15 @@ N = 50
 # ===============================
 
 # GC
-gc.set_debug(gc.DEBUG_LEAK)
-sys.stderr = open('bugreport.txt', 'w')
-print str(gc.get_debug())
+#gc.set_debug(gc.DEBUG_LEAK)
+#sys.stderr = open('bugreport.txt', 'w')
+#print str(gc.get_debug())
+
 # Dozer
-wsgi_app = Dozer(wsgi_app)
+#wsgi_app = Dozer(wsgi_app)
+
+# Guppy/HEAPY
+#hp = hpy()
 
 # Functions
 # ================================
@@ -82,7 +90,7 @@ outFile.close()
 outFile = open(outFilename, 'a')
 
 for M in range(runs):
-    print "run " + str(M),
+#    print "run " + str(M),
     #print "Run " + str(M),
     cluster.single_run(N, False)
     outFile.write(str(memoryusage.memory()) + "\n")
@@ -92,12 +100,16 @@ for M in range(runs):
 #    dirt = []
 #    cleaningcrew(dir()) 
     #print str(gc.garbage)
-    print "Annoying items: " + str(gc.collect())
+#    print "Annoying items: " + str(gc.collect())
     #print "END CREW"
 #    del cluster.w
 #    del cluster.s # If this one is thrown in, the runs suddenly stop?!
 #    del cluster.m
-    print "(" + str(memoryusage.memory()) + ")."    
+#    print "(" + str(memoryusage.memory()) + ")."  
+
+#    h = hp.heap()
+#    print str(h)
+
 
 outFile.close()
 
