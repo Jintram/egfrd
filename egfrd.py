@@ -778,26 +778,25 @@ class EGFRDSimulator(ParticleSimulatorBase):
                 self.get_closest_obj(singlepos, ignore=[single.domain_id],
                                      ignores=[single.surface.id])
 
-###
         if isinstance(closest, Single):
-        D1 = single.getD()        
-        D2 = closest.getD()
-        sqrtD1 = math.sqrt(D1)
+            D1 = single.getD()        
+            D2 = closest.getD()
+            sqrtD1 = math.sqrt(D1)
 
-        radius1 = single.pid_particle_pair[1].radius
-        radius2 = closest.pid_particle_pair[1].radius
+            radius1 = single.pid_particle_pair[1].radius
+            radius2 = closest.pid_particle_pair[1].radius
 
-        delta = 
+            delta = self.world.distance(single.pid_particle_pair[1].position, 
+                        closest.pid_particle_pair[1].position)
+            # (TODO remove) _gfrd.World.distance?
 
-        min_shell = (radius1 * self.SINGLE_SHELL_FACTOR +
-                     self.KOICHI_SINGLE_SHELL_FACTOR*
-                     (delta)*sqrtD1 / (sqrtD1 + math.sqrt(D2)))
+            min_shell = (radius1 * self.SINGLE_SHELL_FACTOR +
+                         self.KOICHI_SINGLE_SHELL_FACTOR*
+                         (delta)*sqrtD1 / (sqrtD1 + math.sqrt(D2)))
 
-        else:  # Pair or Multi or Surface
-            min_shell = distance_to_shell / SAFETY
-            new_shell_size = max(new_shell_size,
-                                 single.pid_particle_pair[1].radius)
-###
+        else:  # Pair or Multi or Surface (TODO: Pair case)
+            min_shell = single.pid_particle_pair[1].radius *\
+                                        self.SINGLE_SHELL_FACTOR
 
         #
 
