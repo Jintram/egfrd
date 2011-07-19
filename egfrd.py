@@ -1,5 +1,6 @@
 #!/usr/env python
 
+
 from weakref import ref
 import math
 
@@ -111,6 +112,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         self.MULTI_SHELL_FACTOR = 0.05
         self.SINGLE_SHELL_FACTOR = 1.1
+        self.KOICHI_SINGLE_SHELL_FACTOR = 0.1 #MW
 
         self.is_dirty = True
         self.scheduler = EventScheduler()
@@ -308,14 +310,10 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # assert if not too many successive dt=0 steps occur.
         if __debug__:
             if self.dt == 0:
-                log.warning('dt=zero step, working in s.t >> dt~0 Python limit.')
                 self.zero_steps += 1
-                # TODO Changed from 10 to 10000, because only a problem 
-                # when reaching certain magnitude.
-                if self.zero_steps >= max(self.scheduler.size * 3, 10000): 
+                if self.zero_steps >= max(self.scheduler.size * 3, 10):
                     raise RuntimeError('too many dt=zero steps. '
-                                       'Simulator halted?'
-                                    'dt= %.300g-%.300g' % (self.scheduler.top[1].time, self.t))
+                                       'Simulator halted?')
             else:
                 self.zero_steps = 0
 
@@ -744,15 +742,12 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
             return
 
-#       TO BE DELETED; code shouldn't be here. 
-#       (<-> Surface binding en unbinding.)
-#
-#        if single.event_type == EventType.IV_EVENT:
-#            # Draw actual pair event for iv at very last minute.
-#            single.event_type = single.draw_iv_event_type()
-#            self.interaction_steps[single.event_type] += 1
-#        else:
-#            self.single_steps[single.event_type] += 1
+        if single.event_type == EventType.IV_EVENT:
+            # Draw actual pair event for iv at very last minute.
+            single.event_type = single.draw_iv_event_type()
+            self.interaction_steps[single.event_type] += 1
+        else:
+            self.single_steps[single.event_type] += 1
 
         if __debug__:
             log.info('%s' % single.event_type)
@@ -774,8 +769,37 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         # (2) Clear volume.
 
-        min_shell = single.pid_particle_pair[1].radius * \
-                    self.SINGLE_SHELL_FACTOR
+        # Perhaps this can be faster?
+        #min_shell = single.pid_particle_pair[1].radius * \
+        #            self.SINGLE_SHELL_FACTOR
+
+        # MW: min. shell radius calculation using 10% Koichi ideal radius
+        closest, closest_distance = \
+                self.get_closest_obj(singlepos, ignore=[single.domain_id],
+                                     ignores=[single.surface.id])
+
+###
+        if isinstance(closest, Single):
+        D1 = single.getD()        
+        D2 = closest.getD()
+        sqrtD1 = math.sqrt(D1)
+
+        radius1 = single.pid_particle_pair[1].radius
+        radius2 = closest.pid_particle_pair[1].radius
+
+        delta = 
+
+        min_shell = (radius1 * self.SINGLE_SHELL_FACTOR +
+                     self.KOICHI_SINGLE_SHELL_FACTOR*
+                     (delta)*sqrtD1 / (sqrtD1 + math.sqrt(D2)))
+
+        else:  # Pair or Multi or Surface
+            min_shell = distance_to_shell / SAFETY
+            new_shell_size = max(new_shell_size,
+                                 single.pid_particle_pair[1].radius)
+###
+
+        #
 
         intruders, closest, closest_distance = \
             self.get_intruders(singlepos, min_shell,
