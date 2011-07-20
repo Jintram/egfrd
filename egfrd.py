@@ -788,7 +788,6 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
             delta = self.world.distance(single.pid_particle_pair[1].position, 
                         closest.pid_particle_pair[1].position)
-            # (TODO remove) _gfrd.World.distance?
 
             min_shell = (radius1 * self.SINGLE_SHELL_FACTOR +
                          self.KOICHI_SINGLE_SHELL_FACTOR*
