@@ -229,7 +229,7 @@ class SimplePair(Pair):
         D1 = self.pid_particle_pair1[1].D
         D2 = self.pid_particle_pair2[1].D
 
-        LD_MAX = 20 # temporary value
+        LD_MAX = self.LD_MAX # temporary value
         a_r_max = LD_MAX * (r0 - self.sigma) + self.sigma
         # a_r_max is the maximum size of a_r for a given maximum ratio of l/delta
 
@@ -313,6 +313,7 @@ class SphericalPair(SimplePair, hasSphericalShell):
         assert isinstance(testShell, SphericalPairtestShell)
         hasSphericalShell.__init__(self, testShell, domain_id)
         SimplePair.__init__(self, domain_id, shell_id, rrs)     # Always initialize AFTER hasSphericalShell
+        self.LD_MAX = numpy.inf
 
     def com_greens_function(self):
         # Green's function for centre of mass inside absorbing sphere.
@@ -411,6 +412,7 @@ class PlanarSurfacePair(SimplePair, hasCylindricalShell):
         assert isinstance(testShell, PlanarSurfacePairtestShell)
         hasCylindricalShell.__init__(self, testShell, domain_id)
         SimplePair.__init__(self, domain_id, shell_id, rrs)
+        self.LD_MAX = 20
 
     def com_greens_function(self):
         return GreensFunction2DAbsSym(self.D_R, self.a_R)
@@ -500,15 +502,26 @@ class CylindricalSurfacePair(SimplePair, hasCylindricalShell):
         assert isinstance(testShell, CylindricalSurfacePairtestShell)
         hasCylindricalShell.__init__(self, testShell, domain_id)
         SimplePair.__init__(self, domain_id, shell_id, rrs)
+        self.LD_MAX = numpy.inf
+
+
+    def get_shell_size(self):
+        return self.shell.shape.half_length
 
     def get_v_tot(self):
-        return self.pid_particle_pair2[1].v - \
-               self.pid_particle_pair1[1].v
+        # 'direction' signifies the direction of the IV with respect to the surface unit_z
+        # (which defines the direction of positive drift)
+        direction = cmp(numpy.dot (self.iv, self.structure.shape.unit_z), 0)
+        return (self.pid_particle_pair2[1].v - \
+                self.pid_particle_pair1[1].v) * direction
+
+    # NOTE the v_tot and v_r are now positive in the direction of the IV!
     v_tot = property(get_v_tot)
     
     v_r = property(get_v_tot)
 
     def get_v_R(self):
+        # The v_R is always in the direction of the structure, no adjustment required.
         return (self.pid_particle_pair1[1].v * 
                 self.pid_particle_pair2[1].D +
                 self.pid_particle_pair2[1].v *
@@ -526,9 +539,37 @@ class CylindricalSurfacePair(SimplePair, hasCylindricalShell):
         # Todo
         return self.iv_greens_function(r0)
 
-    def create_com_vector(self, r):
+    def create_com_vector(self, z):
+        # 'z' can be interpreted in two different ways here, it may a coordinate in the z direction or it may
+        # be a displacement from the origin. In the first case it will already contain the drift information.
+        if self.v_R == 0.0:
+            # if there is no drift then we regard 'z' as a displacement from the origin. Although
+            # it actually represents a coordinate when drawR was called. It is a displacement when z=a.
+            # We randomize the direction.
+            z = myrandom.choice(-1, 1) * z
+
+        elif self.v_R != 0.0 and feq(z, self.a_R):
+            # When there is drift and z=a, the 'z' actually represent the displacement from the origin and a
+            # boundary must be chosen.
+
+            # The Escape can be either to the left or to the right.
+            # The side of escape should be decided on by the flux through both boundaries at the escape time
+            gf = self.com_greens_function()
+            event_kind = draw_event_type_wrapper(gf, self.dt)
+            if event_kind == PairEventKind.IV_REACTION:     # IV_REACTION -> ESCAPE through 'left' boundary
+                z = -z      # -self.a_R
+            elif event_kind == PairEventKind.IV_ESCAPE:     # IV_ESCAPE -> ESCAPE through 'right' boundary
+                #z = z      # self.a_R
+                pass
+            else:
+                raise NotImplemented()
+        else:
+            # When there was drift and the particle was not at the boundary.
+            # -> In this case the 'z' actually signifies a coordinate and nothing has to be done.
+            pass
+
         # project the com onto the surface unit vector to make sure that the coordinates are in the surface
-        return r * self.structure.shape.unit_z
+        return z * self.structure.shape.unit_z
 
     def create_interparticle_vector(self, gf, r, dt, r0, old_iv): 
         if __debug__:
