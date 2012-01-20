@@ -319,8 +319,14 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         non_single_list = []
 
+        # TODO: this could be done a little bit neater.
+
         # first burst all Singles, and put Pairs and Multis in a list.
+        event_list_bla = []
         for id, event in self.scheduler:
+            event_list_bla.append(event)
+            
+        for event in event_list_bla:
             obj = self.domains[event.data]
             if isinstance(obj, Pair) or isinstance(obj, Multi):
                 non_single_list.append(obj)
