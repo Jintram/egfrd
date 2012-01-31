@@ -37,6 +37,8 @@ from shells import (
     testShellError,
     testPair,
     testInteractionSingle,
+    hasSphericalShell,
+    hasCylindricalShell,
     SphericalSingletestShell,
     SphericalPairtestShell,
     PlanarSurfaceSingletestShell,
@@ -401,7 +403,6 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # assert if not too many successive dt=0 steps occur.
         if __debug__:
             if self.dt == 0:
-                log.debug('dt=zero step, working in s.t >> dt~0 Python limit.')
                 self.zero_steps += 1
                 # TODO What is best solution here? Usually no prob, -> just let 
                 # user know?
@@ -661,14 +662,18 @@ class EGFRDSimulator(ParticleSimulatorBase):
         neighbors = [self.domains[domain_id] for domain_id in neighbor_ids]
         return self.burst_domains(neighbors)
 
-    def burst_non_multis(self, domain_distances, burstradius):
-        # Bursts the domains in 'domains' if within burstradius
+    def burst_non_multis(self, domain_distances, burstradius, already_bursted):
+        # Recursively bursts the domains in 'domains' if within burstradius
         # Returns the updated list of domains with their distances
 
-        domain_distances_updated = []
+        log.debug("burst_non_multi")
 
-        for domain, distance in domain_distances:
+        for domain_distance in domain_distances:
+            domain, distance = domain_distance
+            log.debug("%s" % str(domain))
+
             if distance <= burstradius and \
+               domain.domain_id not in already_bursted and \
                not isinstance(domain, Multi) and \
                not (isinstance(domain, NonInteractionSingle) and domain.is_reset()) and \
                self.t != domain.last_time:
@@ -677,18 +682,55 @@ class EGFRDSimulator(ParticleSimulatorBase):
                 # -domain is not a multi
                 # -domain is not zero dt NonInteractionSingle
                 # -domain has time passed
+                log.debug("domain %s bursted. self.t= %s, domain.last_time= %s" % \
+                          (str(domain), FORMAT_DOUBLE % self.t, FORMAT_DOUBLE % domain.last_time))
+
+                # burst the domain and remove the original domain from the domain_distances list
+#                domain_distances.remove(domain_distance)
+                already_bursted.add(domain.domain_id)
                 single_list = self.burst_domain(domain)
-                single_distances = [(single, 0) for single in single_list]  # TODO? calculate real distance, now just 0
-                domain_distances_updated.extend(single_distances)
+
+#                # Add the produced non-InteractionSingles to the updated list of neighbors
+#                single_distances = [(single, 0) for single in single_list]  # TODO? calculate real distance, now just 0
+#                domain_distances.extend(single_distances)
+                # Make sure that all the new singles are being ignored
+                for single in single_list:
+                    already_bursted.add(single.domain_id)
+
+                # Additionally, also burst recursively for every single created
+                for single in single_list:
+                    single_pos = single.pid_particle_pair[1].position
+                    single_radius = single.pid_particle_pair[1].radius
+                    # For each single find the neighbors and (if we already knew about this neighbor) new distances
+                    neighbor_distances_single = self.geometrycontainer.get_neighbor_domains(single_pos, self.domains, list(already_bursted))
+
+#                    # make sure that there's only one occurance for each neighbor and that 'newer' copies get preference.
+#                    neighbor_distances_single.extend(domain_distances)        # add old ones
+#                    seen = set()
+#                    seen_add = seen.add
+#                    neighbor_distances = [ (x,y) for x, y in neighbor_distances_single if x not in seen and not seen_add(x)]
+
+                    # burst the neighbors with the new distances (if necessary/possible)
+                    _, already_bursted = self.burst_non_multis(neighbor_distances_single, single_radius*SINGLE_SHELL_FACTOR, already_bursted)
             else:
                 # Don't burst domain if (OR):
                 # -domain is farther than burst radius
                 # -domain is a multi
                 # -domain is already a burst NonInteractionSingle (zero dt NonInteractionSingle)
                 # -domain is domain in which no time has passed
-                domain_distances_updated.append((domain, distance))
+                log.debug("domain %s not bursted. self.t= %s, domain.last_time= %s" % \
+                          (str(domain), FORMAT_DOUBLE % self.t, FORMAT_DOUBLE % domain.last_time))
 
-        return domain_distances_updated
+                # nothing needs to happen
+#                # just copy the domain to the new list
+#                domain_distances_updated.append(domain_distance)
+                # also, if the domain was just bursted put it on the ignore list
+                # -> also in the future nothing needs to happen.
+                if isinstance(domain, NonInteractionSingle) and domain.is_reset():
+                    already_bursted.add(domain.domain_id)
+
+        log.debug("  done..")
+        return domain_distances, already_bursted
 
     def fire_single_reaction(self, single, reactant_pos):
         # This takes care of the identity change when a single particle decays into
@@ -1190,13 +1232,14 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # -shell is burstable (not Multi)
         # -shell is not newly made
         # -shell is not already a zero shell (just bursted)
-        neighbor_distances = self.burst_non_multis(neighbors, reaction_threshold)
-
+        _, ignore = self.burst_non_multis(neighbors, reaction_threshold, set([single.domain_id]))
+#        neighbor_distances = [(self.domains[domain_id], 0) for domain_id in ignore if domain_id != single.domain_id]
 
         # We prefer to make NonInteractionSingles for efficiency.
         # But if objects (Shells and surfaces) get close enough (closer than
         # reaction_threshold) we want to try Interaction and/or Pairs
 
+        neighbor_distances = self.geometrycontainer.get_neighbor_domains(single_pos, self.domains, ignore=[single.domain_id, ])
         # 2.3 From the updated list of neighbors, we calculate the thresholds (horizons) for trying to form
         #     the various domains. The domains can be:
         # -zero-shell NonInteractionSingle -> Pair or Multi
@@ -1371,10 +1414,11 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         single.last_time = self.t
 
-        # check everything is ok
-        assert self.check_domain(single)
         # add to scheduler
         self.add_domain_event(single)
+        # check everything is ok
+        if __debug__:
+            assert self.check_domain(single)
 
         return single
 
@@ -1386,26 +1430,31 @@ class EGFRDSimulator(ParticleSimulatorBase):
     # case is just a BURST event.
 
         # TODO assert that there is no event associated with this domain in the scheduler
-
-        ### log Single event
-        if __debug__:
-            log.info('FIRE SINGLE: %s' % single.event_type)
-            log.info('single = %s' % single)
-
+#        assert self.check_domain(single)
 
         if single.is_reset():
         ### If no event event really happened and just need to make new domain
+            if __debug__:
+                log.info('FIRE SINGLE: make_new_domain()')
+                log.info('single = %s' % single)
             domains = [self.make_new_domain(single)]
             # domain is already scheduled in make_new_domain
 
         ### 1.1 Special cases (shortcuts)
         # In case nothing is scheduled to happen: do nothing and just reschedule
         elif single.dt == numpy.inf:
+            if __debug__:
+                log.info('FIRE SINGLE: Nothing happens-> single.dt=inf')
+                log.info('single = %s' % single)
             self.add_domain_event(single)
             domains = [single]
 
         else:
         ### 1. Process 'normal' event produced by the single
+            ### log Single event
+            if __debug__:
+                log.info('FIRE SINGLE: %s' % single.event_type)
+                log.info('single = %s' % single)
 
             if single.event_type != EventType.BURST:
                 # The burst of the domain may be caused by an overlapping domain
@@ -1725,6 +1774,8 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # Override event_type. 
         single.dt = self.t - single.last_time
         single.event_type = EventType.BURST
+        # with a burst there is always an associated event in the scheduler.
+        # to simulate the natural occurence of the event we have to remove it from the scheduler
         self.remove_event(single)
 
         newsingles = self.process_single_event(single)
@@ -1746,7 +1797,9 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # Override event time and event_type. 
         pair.dt = self.t - pair.last_time 
         pair.event_type = EventType.BURST
-        self.remove_event(pair)         # remove the event -> was still in the scheduler
+        # with a burst there is always an associated event in the scheduler.
+        # to simulate the natural occurence of the event we have to remove it from the scheduler
+        self.remove_event(pair)
 
         newsingles = self.process_pair_event(pair)
 
@@ -1791,10 +1844,11 @@ class EGFRDSimulator(ParticleSimulatorBase):
             self.remove_domain(single)
             # the event associated with the single will be removed by the scheduler.
 
-            # check everything is ok
-            assert self.check_domain(interaction)
             # add to scheduler
             self.add_domain_event(interaction)
+            # check everything is ok
+            if __debug__:
+                assert self.check_domain(interaction)
 
             return interaction
         else:
@@ -1843,10 +1897,11 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # pair.
             self.remove_event(single2)
 
-            # check everything is ok
-            assert self.check_domain(pair)
             # add to scheduler
             self.add_domain_event(pair)
+            # check everything is ok
+            if __debug__:
+                assert self.check_domain(pair)
 
             return pair
         else:
@@ -1911,6 +1966,9 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # In case of new multi
             self.add_domain_event(multi)
 
+        if __debug__:
+            assert self.check_domain(multi)
+
         return multi
 
 
@@ -1939,13 +1997,16 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
             # 2. Burst the domains that interfere with making the multi shell
             burstradius = domain.pid_particle_pair[1].radius * MULTI_SHELL_FACTOR
-            neighbor_distances = self.burst_non_multis(neighbor_distances, burstradius)
+            _, ignore = self.burst_non_multis(neighbor_distances, burstradius,
+                                                               set([domain.domain_id, multi.domain_id]))
             # This bursts only domains in which time has passed, it is assumed that other domains
             # have been made 'socially', meaning that they leave enough space for this particle to make a multi
             # shell without overlapping. 
 
             # neighbor_distances has same format as before
             # It contains the updated list of domains in the neighborhood with distances
+            neighbor_distances = self.geometrycontainer.get_neighbor_domains(dompos, self.domains,
+                                                                             ignore=[domain.domain_id, multi.domain_id])
 
             # 3. add domain to the multi
             self.add_to_multi(domain, multi)
@@ -2109,6 +2170,7 @@ rejected moves = %d
     def check_domain(self, domain):
         domain.check()
 
+        # construct ignore list for surfaces
         if isinstance(domain, Multi):
             # Ignore all surfaces, multi shells can overlap with 
             # surfaces.
@@ -2124,8 +2186,10 @@ rejected moves = %d
 
 
 
+        ###### check shell consistency
         for shell_id, shell in domain.shell_list:
 
+            ### Check shell overlap with surfaces
             # TODO should be replace by list of surface
             surface, distance = get_closest_surface(self.world, shell.shape.position, ignores)
             if surface:
@@ -2135,21 +2199,27 @@ rejected moves = %d
                         '%s (%s) overlaps with %s.' % \
                         (str(domain), str(shell), str(surface))
 
-
+            ### Check shell overlap with other shells
             neighbors = self.geometrycontainer.get_neighbor_domains(shell.shape.position,
                                                                     self.domains, ignore=[domain.domain_id])
             # TODO maybe don't check all the shells, this takes a lot of time
 
             # testing overlap criteria
             for neighbor, _ in neighbors:
-                for _, neighbor_shell in neighbor.shell_list:
-                    overlap = self.check_shell_overlap(shell, neighbor_shell)
-                    assert overlap >= 0.0, \
-                        '%s (%s) overlaps with %s (%s) by %s.' % \
-                        (domain, str(shell), str(neighbor), str(neighbor_shell), FORMAT_DOUBLE % overlap)
+                # note that the shell of a MixedPair or Multi that has have just been bursted can stick into each other.
+                if not (((isinstance(domain, hasCylindricalShell)   and isinstance(domain, NonInteractionSingle)   and domain.is_reset()) and \
+                         (isinstance(neighbor, hasSphericalShell)   and isinstance(neighbor, NonInteractionSingle) and domain.is_reset()) ) or \
+                        ((isinstance(domain, hasSphericalShell)     and isinstance(domain, NonInteractionSingle)   and domain.is_reset()) and \
+                         (isinstance(neighbor, hasCylindricalShell) and isinstance(neighbor, NonInteractionSingle) and domain.is_reset()) )):
+
+                    for _, neighbor_shell in neighbor.shell_list:
+                        overlap = self.check_shell_overlap(shell, neighbor_shell)
+                        assert overlap >= 0.0, \
+                            '%s (%s) overlaps with %s (%s) by %s.' % \
+                            (domain, str(shell), str(neighbor), str(neighbor_shell), FORMAT_DOUBLE % overlap)
 
 
-            # checking wether the shell don't exceed the maximum size
+            ### checking if the shell don't exceed the maximum size
             if (type(shell.shape) is Cylinder):
                 # the cylinder should at least fit in the maximal sphere
                 shell_size = math.sqrt(shell.shape.radius**2 + shell.shape.half_length**2)
@@ -2169,9 +2239,7 @@ rejected moves = %d
         return True
 
     def check_shell_overlap(self, shell1, shell2):
-    # Returns True if the shells DO NOT overlap
-    # Returns False if the shells DO overlap
-    # Return the amount of overlap (positive number means no overlap, negative means overlap)
+    # Return the amount of overlap between two shells (positive number means no overlap, negative means overlap)
 
         # overlap criterium when both shells are spherical
         if (type(shell1.shape) is Sphere) and (type(shell2.shape) is Sphere):
@@ -2194,7 +2262,7 @@ rejected moves = %d
             overlap_r = length(inter_pos_r) - (shell1.shape.radius + shell2.shape.radius)
             overlap_z = length(inter_pos_z) - (shell1.shape.half_length + shell2.shape.half_length)
             if (overlap_r < 0.0) and (overlap_z < 0.0):
-                return -1           # TODO: find better number for overlap measure
+                return -(overlap_r * overlap_z)           # TODO: find better number for overlap measure
             else:
                 return 1
 
@@ -2215,6 +2283,8 @@ rejected moves = %d
 
 
     def check_surface_overlap(self, shell, surface):
+    # Returns True if the shell and surface do not overlap, and False if they do overlap.
+
         if (type(shell.shape) is Sphere):
             distance = self.world.distance(surface.shape, shell.shape.position)
             return shell.shape.radius < distance
@@ -2236,6 +2306,7 @@ rejected moves = %d
 
 
     def check_domain_for_all(self):
+    # For every event in the scheduler, checks the consistency of the associated domain.
         for id, event in self.scheduler:
             domain = self.domains[event.data]
             self.check_domain(domain)
@@ -2276,6 +2347,74 @@ rejected moves = %d
         if shell_population != matrix_population:
             raise RuntimeError('num shells (%d) != matrix population (%d)' %
                                (shell_population, matrix_population))
+
+### check scheduler
+# check that every domain in domains{} has one and only one event in the scheduler
+# check that every event with domain is also in domains{}
+# check that dt, last_time of the domain is consistent with the event time on the scheduler
+# check that every event on scheduler is associated with domain or is a non domain related event
+
+# check that all the cached singles in Pairs are not in domains{}.
+
+### check shell container
+# check that shells of a domain in domains{} are once and only once in the shell matrix
+# check that all shells in the matrix are once and only once in a domain
+# total number of shells in domains==total number of shells in shell container
+# check that the shells of all the cached singles in Pairs are not in the containers
+
+### check shells of domains
+# check that shells of the domain do not overlap with shells of other domains
+# check that shells are not bigger than the allowed maximum
+# check (for Multi's only?) that the shells in a domain are connected (have consecutive overlaps)
+# check that shells of the domain don't overlap with surfaces that are not associated with the domain.
+# check that shells of the domain DO overlap with the structures that it is associated with.
+
+### check world
+# check num particles in domains is equal to num particles in the world
+# check that every particle in the world is in one and only one domain
+# check that every particle in the domains is once and only once in the world.
+# check that particles do not overlap with cylinderical surfaces unless the domain is associated with the surface
+
+### check domains
+# check that testShell is of proper type
+# check that the particles are within the shells of the domain
+# check that proper number of shells for domain, most other number of shells==1
+# check that the shell(s) of domain have the proper geometry (sphere/cylinder)
+# check that shell is within minimum and maximum
+# check that shell obeys scaling properties
+# check that the position of the shell(s) and particle(s) are within the structures that the particles live on
+# check that dt != 0 unless NonInteractionSingle.is_reset()
+# check event_type != BURST
+# check associated structures are of proper type (plane etc, but also of proper StructureTypeID)
+# check that Green's functions are defined.
+
+### check NonInteractionSingle
+# check if is_reset() then shellsize is size particle, dt==0, event_type==ESCAPE
+# check shell.unit_z == structure.unit_z
+# check drift < inf
+# check inner space < shell
+
+### check Pair
+# check number of particles==2
+# check D_R, D_r > 0
+# check r0 is between sigma and a (within bounds of greens function)
+# check sigma
+
+### check SimplePair
+# check CoM, iv lies in the structure of the particles
+# check shell.unit_z == structure.unit_z
+
+### check MixedPair
+# check CoM is in surface, IV is NOT
+
+### check Interaction
+# check shell.unit_z = +- surface.unit_z
+
+### check consistency of the model
+# check that the product species of an interaction lives on the interaction surface.
+# check that the product species of a bimolecular reaction lives on either structure of reactant species
+# check that the product species of a unimolecular reaction lives on structure of the reactant species or the bulk.
+# structures cannot overlap unless substructure
 
     def check_domains(self):
     # checks that the events in the scheduler are consistent with the domains
