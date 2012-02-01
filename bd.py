@@ -4,6 +4,8 @@ import math
 
 import numpy
 
+import settings
+
 from utils import *
 
 from gfrdbase import *
@@ -70,7 +72,7 @@ class BDSimulatorCore(object):
     def determine_dt(self):
         self.dt = self.dt_factor * \
                calculate_bd_dt(self.world.species)
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug('bd dt = %g' % self.dt)
 
     def step(self):
@@ -149,7 +151,7 @@ class BDSimulator(ParticleSimulatorBase):
 
         self.core.step()
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('%d: t=%g dt=%g, reactions=%d, rejected_moves=%d' %
                  (self.step_counter, self.t, self.dt, self.reaction_events,
                   self.rejected_moves))

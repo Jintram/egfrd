@@ -4,6 +4,8 @@ import numpy
 import scipy
 import myrandom
 
+import settings
+
 import _gfrd
 
 Pi = scipy.pi
@@ -36,7 +38,7 @@ SINGLE_SHELL_FACTOR = 2.0           # This is the threshold for when the algorit
                                     # NonInteractionSingles to a Pair or Interaction. It also defines
                                     # the radius in which the NonInteractionSingle will burst.
 
-if __debug__:
+if settings.PERFORM_CHECKS:
     PRECISION = 7
     FORMAT_DOUBLE = '%.' + str(PRECISION) + 'g'
 

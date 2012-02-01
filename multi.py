@@ -1,5 +1,7 @@
 from weakref import ref
 
+import settings
+
 from gfrdbase import *
 from utils import *
 import itertools
@@ -60,13 +62,13 @@ class Multi(Domain, hasSphericalShell, Others):
         return bool(self.sphere_container.get_neighbors_within_radius(pp[1].position, -(pp[1].radius + self.reaction_length)))
 
     def add_shell(self, shell_id_shell_pair):
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info("add shell to multi:\n  (%s,\n   %s)" %
                      (shell_id_shell_pair[0], shell_id_shell_pair[1]))
         self.sphere_container.update(shell_id_shell_pair)
 
     def add_particle(self, pid_particle_pair):
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info("add particle to multi:\n  (%s,\n   %s)" % 
                      (pid_particle_pair[0], pid_particle_pair[1]))
         self.particle_container.update_particle(pid_particle_pair)
@@ -131,7 +133,7 @@ class Multi(Domain, hasSphericalShell, Others):
         #         tx.modified_particles, tx.added_particles):
         #     overlapped = main.world.check_overlap(pid_particle_pair[1].shape, pid_particle_pair[0])
         #     if overlapped:
-        #         if __debug__:
+        #         if settings.PERFORM_CHECKS:
         #             log.info("collision occurred between particles of a multi and the outside: %s - %s.  moves will be rolled back." % (pid_particle_pair, list(overlapped)))
         #         tx.rollback()
         #         return

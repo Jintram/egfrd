@@ -1,3 +1,5 @@
+import settings
+
 from _gfrd import *
 from constants import EventType
 from _greens_functions import *
@@ -60,7 +62,7 @@ class Pair(ProtectiveDomain, Others):
         self.sigma = self.testShell.sigma
 
     def __del__(self):
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug('del %s' % str(self))
 
     def get_D_tot(self):
@@ -274,7 +276,7 @@ class SimplePair(Pair):
         if (a_r > a_r_max):
             a_r = a_r_max
             a_R = shell_size - radiusa - a_r * Da / D_tot
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('domainsize changed for convergence.')
 
         assert a_R + a_r * Da / D_tot + radiusa >= \
@@ -284,10 +286,10 @@ class SimplePair(Pair):
             < 1e-12 * shell_size                        # here the shell_size is the relevant scale
 
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
           log.debug('a %g, r %g, R %g r0 %g' % 
                  (shell_size, a_r, a_R, r0))
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             tr = ((a_r - r0)**2) / (6 * self.D_r)       # the expected escape time of the iv
             if self.D_R == 0:
                 tR = numpy.inf 
@@ -342,12 +344,12 @@ class SphericalPair(SimplePair, hasSphericalShell):
             if distance_from_shell < threshold_distance:
                 # near both a and sigma;
                 # use GreensFunction3DRadAbs
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('GF: normal')
                 return self.iv_greens_function(r0)
             else:
                 # near sigma; use GreensFunction3DRadInf
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('GF: only sigma')
                 return GreensFunction3DRadInf(self.D_r, self.interparticle_ktot, r0,
                                                self.sigma)
@@ -356,13 +358,13 @@ class SphericalPair(SimplePair, hasSphericalShell):
         else:
             if distance_from_shell < threshold_distance:
                 # near a;
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('GF: only a')
                 return GreensFunction3DAbs(self.D_r, r0, self.a_r)
                 
             else:
                 # distant from both a and sigma; 
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('GF: free')
                 return GreensFunction3D(self.D_r, r0)
 
@@ -371,7 +373,7 @@ class SphericalPair(SimplePair, hasSphericalShell):
 
     def create_interparticle_vector(self, gf, r, dt, r0, old_iv): 
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug("create_interparticle_vector: r=%g, dt=%g", r, dt)
         theta = draw_theta_wrapper(gf, r, dt)
 
@@ -436,12 +438,12 @@ class PlanarSurfacePair(SimplePair, hasCylindricalShell):
             if distance_from_shell < threshold_distance:
                 # near both a and sigma;
                 # use GreensFunction2DRadAbs
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('GF2D: normal')
                 return self.iv_greens_function(r0)
             else:
                 # near sigma; use GreensFunction2DRadInf
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('GF2D: only sigma')
                 return self.iv_greens_function(r0)
                 # Todo
@@ -449,7 +451,7 @@ class PlanarSurfacePair(SimplePair, hasCylindricalShell):
         else:
             if distance_from_shell < threshold_distance:
                 # near a;
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('GF2D: only a')
                 return self.iv_greens_function(r0)
                 # Todo
@@ -457,7 +459,7 @@ class PlanarSurfacePair(SimplePair, hasCylindricalShell):
                 
             else:
                 # distant from both a and sigma; 
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('GF2D: free')
                 return self.iv_greens_function(r0)
                 # Todo
@@ -470,7 +472,7 @@ class PlanarSurfacePair(SimplePair, hasCylindricalShell):
 
     def create_interparticle_vector(self, gf, r, dt, r0, old_iv): 
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug("create_interparticle_vector: r=%g, dt=%g", r, dt)
         theta = draw_theta_wrapper(gf, r, dt)
 
@@ -573,7 +575,7 @@ class CylindricalSurfacePair(SimplePair, hasCylindricalShell):
         return z * self.structure.shape.unit_z
 
     def create_interparticle_vector(self, gf, r, dt, r0, old_iv): 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug("create_interparticle_vector: r=%g, dt=%g", r, dt)
 
         # note that r0 = length (old_iv)
@@ -624,7 +626,7 @@ class MixedPair2D3D(Pair, hasCylindricalShell):
         # Use class methods to check dimensions of the cylinder
         r_check  = self.testShell.r_right (half_length*2 - radius1)
         hl_check = (self.testShell.z_right (radius) + self.testShell.z_left (radius))/2
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             assert feq(r_check, radius) and feq(hl_check, half_length), \
                 'MixedPair2D3D: Domain did not obey scaling relationship. ' \
                 'radius = %s, half_length = %s, radius_check = %s, half_length_check = %s' % \
@@ -644,7 +646,7 @@ class MixedPair2D3D(Pair, hasCylindricalShell):
 
 
         # Print the domain sizes and their estimated first passage times.
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             tr = ((a_r - self.r0)**2) / (6 * self.D_r)  # the expected escape time of the iv
             if self.D_R == 0:
                 tR = numpy.inf 
@@ -725,7 +727,7 @@ class MixedPair2D3D(Pair, hasCylindricalShell):
     def create_interparticle_vector(self, gf, r, dt, r0, old_iv):
         # FIXME This is actually the same method as for SphericalPair
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug("create_interparticle_vector: r=%g, dt=%g", r, dt)
 
         theta = draw_theta_wrapper(gf, r, dt)   # draw_theta return a value between -Pi and Pi

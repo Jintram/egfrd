@@ -5,6 +5,8 @@ import math
 
 import numpy
 
+import settings
+
 from _gfrd import (
     Event,
     EventScheduler,
@@ -272,7 +274,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         for pid_particle_pair in pid_particle_pairs:
             single = self.create_single(pid_particle_pair)
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.debug('%s as single %s' %
                           (pid_particle_pair[0], single.domain_id))
             singles.append(single)
@@ -305,7 +307,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         step.
 
         """
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('stop at %s' % (FORMAT_DOUBLE % t))
 
         if self.t == t:                         # We actually already stopped?
@@ -329,7 +331,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             if isinstance(domain, Pair) or isinstance(domain, Multi):
                 non_single_list.append(domain)
             elif isinstance(domain, Single):
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('burst %s, last_time= %s' % 
                               (domain, FORMAT_DOUBLE % domain.last_time))
                 self.burst_single(domain)
@@ -338,7 +340,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
 
         # then burst all Pairs and Multis.
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug('burst %s' % non_single_list)
         self.burst_domains(non_single_list)
 
@@ -353,13 +355,13 @@ class EGFRDSimulator(ParticleSimulatorBase):
         if self.is_dirty:
             self.initialize()
             
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             if int("0" + os.environ.get("ECELL_CHECK", ""), 10):
                 self.check()
         
         self.step_counter += 1
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             if self.scheduler.size == 0:
                 raise RuntimeError('No Events in scheduler.')
         
@@ -372,7 +374,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         else:
             self.t, self.last_event = event.time, event
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             domain_counts = self.count_domains()
             log.info('\n\n%d: t=%s dt=%s\t' %
                      (self.step_counter, FORMAT_DOUBLE % self.t,
@@ -391,7 +393,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             if isinstance(domain, klass):
                 f(self, domain)         # fire the correct method for the class (e.g. fire_singel(self, Single))
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             if self.scheduler.size == 0:
                 raise RuntimeError('Zero events left.')
 
@@ -401,7 +403,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         self.dt = next_time - self.t
 
         # assert if not too many successive dt=0 steps occur.
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             if self.dt == 0:
                 self.zero_steps += 1
                 # TODO What is best solution here? Usually no prob, -> just let 
@@ -448,9 +450,8 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # 3. update the proper shell container
         self.geometrycontainer.move_shell(single.shell_id_shell_pair)
 
-        if __debug__:
-            # Used in __str__.
-            single.world = self.world
+        # Used in __str__.
+        single.world = self.world
 
         return single
 
@@ -491,9 +492,8 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # 3. update the shell containers 
         self.geometrycontainer.move_shell(interaction.shell_id_shell_pair)
 
-        if __debug__:
-            # Used in __str__.
-            interaction.world = self.world
+        # Used in __str__.
+        interaction.world = self.world
 
         return interaction
 
@@ -524,9 +524,8 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # 3. update the shell containers with the new shell
         self.geometrycontainer.move_shell(pair.shell_id_shell_pair)
 
-        if __debug__:
-            # Used in __str__.
-            pair.world = self.world
+        # Used in __str__.
+        pair.world = self.world
 
         return pair
 
@@ -575,7 +574,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # Removes all the ties to a domain (single, pair, multi) from the system.
         # Note that the particles that it represented still exist
         # in 'world' and that obj also still persits (?!)
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info("remove: %s" % obj)
         # TODO assert that the domain is not still in the scheduler
         del self.domains[obj.domain_id]
@@ -590,19 +589,19 @@ class EGFRDSimulator(ParticleSimulatorBase):
         event_time = self.t + domain.dt
         event_id = self.scheduler.add(
             DomainEvent(event_time, domain))
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('add_event: %s, event=#%d, t=%s' %
                      (domain.domain_id, event_id,
                       FORMAT_DOUBLE % (event_time)))
         domain.event_id = event_id                      # FIXME side effect programming -> unclear!!
 
     def remove_event(self, event):
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('remove_event: event=#%d' % event.event_id)
         del self.scheduler[event.event_id]
 
     def update_domain_event(self, t, domain):
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('update_event: %s, event=#%d, t=%s' %
                      (domain.domain_id, domain.event_id, FORMAT_DOUBLE % t))
         self.scheduler.update((domain.event_id, DomainEvent(t, domain)))
@@ -610,7 +609,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
     def burst_domain(self, domain):
     # Reduces and domain (Single, Pair or Multi) to Singles with the zero shell, and dt=0
     # return a list of Singles that was the result of the bursting
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('burst_domain: %s' % domain)
 
         if isinstance(domain, Single):
@@ -626,7 +625,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                                                         # are broken up to singles with a dt=0 shell instead.
 #            self.remove_event(domain)
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             # After a burst, InteractionSingles should be gone.
             assert all(not isinstance(b, InteractionSingle) for b in bursted)
             log.info('bursted = %s' % ',\n\t  '.join(str(i) for i in bursted))
@@ -670,7 +669,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         for domain_distance in domain_distances:
             domain, distance = domain_distance
-            log.debug("%s" % str(domain))
+            if settings.PERFORM_CHECKS: log.debug("%s" % str(domain))
 
             if distance <= burstradius and \
                domain.domain_id not in already_bursted and \
@@ -682,7 +681,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                 # -domain is not a multi
                 # -domain is not zero dt NonInteractionSingle
                 # -domain has time passed
-                log.debug("domain %s bursted. self.t= %s, domain.last_time= %s" % \
+                if settings.PERFORM_CHECKS: log.debug("domain %s bursted. self.t= %s, domain.last_time= %s" % \
                           (str(domain), FORMAT_DOUBLE % self.t, FORMAT_DOUBLE % domain.last_time))
 
                 # burst the domain and remove the original domain from the domain_distances list
@@ -718,7 +717,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                 # -domain is a multi
                 # -domain is already a burst NonInteractionSingle (zero dt NonInteractionSingle)
                 # -domain is domain in which no time has passed
-                log.debug("domain %s not bursted. self.t= %s, domain.last_time= %s" % \
+                if settings.PERFORM_CHECKS: log.debug("domain %s not bursted. self.t= %s, domain.last_time= %s" % \
                           (str(domain), FORMAT_DOUBLE % self.t, FORMAT_DOUBLE % domain.last_time))
 
                 # nothing needs to happen
@@ -816,7 +815,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                     self.last_reaction = (rr, (reactant[1], None), products)
 
                     # 6. Log the change
-                    if __debug__:
+                    if settings.PERFORM_CHECKS:
                         log.info('product (%s) = %s' % (len(products), products))
 
                     # exit the loop, we have found a new position
@@ -831,7 +830,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                     self.rejected_moves += 1
 
                     # 6. Log the event
-                    if __debug__:
+                    if settings.PERFORM_CHECKS:
                         log.info('single reaction; placing product failed.')
 
             
@@ -994,13 +993,13 @@ class EGFRDSimulator(ParticleSimulatorBase):
                     self.last_reaction = (rr, (reactant[1], None), products)
 
                     # 6. Log the change
-                    if __debug__:
+                    if settings.PERFORM_CHECKS:
                         log.info('products (%s) = %s' % (len(products), products))
 
                     # exit the loop, we have found new positions
                     break
             else:
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.info('single reaction; placing products failed.')
                 moved_reactant = self.move_particle(reactant, reactant_pos)
                 products = [moved_reactant]
@@ -1062,7 +1061,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
             # 3. check that there is space for the products 
             if self.world.check_overlap((product_pos, product_radius), reactant[0]):
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.info('interaction; placing product failed.')
                 moved_reactant = self.move_particle(reactant, reactant_pos)
                 products = [moved_reactant]     # no change 
@@ -1079,7 +1078,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                 self.last_reaction = (rr, (reactant[1], None), products)
 
                 # 6. Log the change
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                      log.info('product (%s) = %s' % (len(products), products))
 
         else:
@@ -1135,7 +1134,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # 3. check that there is space for the products ignoring the reactants
             if self.world.check_overlap((product_pos, product_radius), pid_particle_pair1[0],
                                                                        pid_particle_pair2[0]):
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.info('fire_pair_reaction: no space for product particle.')
                 moved_reactant1 = self.move_particle(pid_particle_pair1, reactant1_pos)
                 moved_reactant2 = self.move_particle(pid_particle_pair2, reactant2_pos)
@@ -1155,7 +1154,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                                       products)
 
                 # 6. Log the change
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.info('fire_pair_reaction: product (%s) = %s' % (len(products), products))
 
         else:
@@ -1222,7 +1221,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         # TODO redundant
         intruders = self.geometrycontainer.filter_distance(neighbors, reaction_threshold)
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug("intruders: %s" %
                       (', '.join(str(i) for i in intruders)))
 
@@ -1377,7 +1376,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                             SINGLE_SHELL_FACTOR, \
                             d2 + single2.pid_particle_pair[1].radius * \
                             SINGLE_SHELL_FACTOR) * 1.3:
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.debug('%s not formed: singles are better' %
                           'Pair(%s, %s)' % (single1.pid_particle_pair[0], 
                                             single2.pid_particle_pair[0]))
@@ -1403,13 +1402,13 @@ class EGFRDSimulator(ParticleSimulatorBase):
         shell_id_shell_pair = (single.shell_id, new_shell) 
         single.shell_id_shell_pair = shell_id_shell_pair
         self.geometrycontainer.move_shell(shell_id_shell_pair)
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('        *Updated single: single: %s, new_shell = %s' % \
                      (single, str(new_shell)))
 
         single.dt, single.event_type = single.determine_next_event()
         assert single.dt >= 0
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('dt=%s' % (FORMAT_DOUBLE % single.dt)) 
 
         single.last_time = self.t
@@ -1417,7 +1416,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # add to scheduler
         self.add_domain_event(single)
         # check everything is ok
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             assert self.check_domain(single)
 
         return single
@@ -1434,7 +1433,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         if single.is_reset():
         ### If no event event really happened and just need to make new domain
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('FIRE SINGLE: make_new_domain()')
                 log.info('single = %s' % single)
             domains = [self.make_new_domain(single)]
@@ -1443,7 +1442,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         ### 1.1 Special cases (shortcuts)
         # In case nothing is scheduled to happen: do nothing and just reschedule
         elif single.dt == numpy.inf:
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('FIRE SINGLE: Nothing happens-> single.dt=inf')
                 log.info('single = %s' % single)
             self.add_domain_event(single)
@@ -1452,7 +1451,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         else:
         ### 1. Process 'normal' event produced by the single
             ### log Single event
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('FIRE SINGLE: %s' % single.event_type)
                 log.info('single = %s' % single)
 
@@ -1491,7 +1490,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # If the single had a decay reaction or interaction.
             if single.event_type == EventType.SINGLE_REACTION or \
                single.event_type == EventType.IV_INTERACTION:
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.info('%s' % single.event_type)
                     log.info('reactant = %s' % single)
 
@@ -1540,7 +1539,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
     # Note that this method is also called when a pair is bursted. This event in that
     # case is just a BURST event.
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('FIRE PAIR: %s' % pair.event_type)
             log.info('single1 = %s' % pair.single1)
             log.info('single2 = %s' % pair.single2)
@@ -1617,7 +1616,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
                 particles = self.fire_move(single1, newpos1, pid_particle_pair2)
                 particles.extend(self.fire_single_reaction(single2, newpos2))
 
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('reactant = %s' % reactingsingle)
 
             # Make new NonInteractionSingle domains for every particle after the reaction.
@@ -1688,7 +1687,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 #        self.domains[single2.domain_id] = single2
 #
 #        # Check the dimensions of the shells of the singles with the shell in the container
-#        if __debug__:
+#        if settings.PERFORM_CHECKS:
 #            container1 = self.geometrycontainer.get_container(single1.shell)
 #            assert container1[single1.shell_id].shape.radius == \
 #                   single1.shell.shape.radius
@@ -1712,7 +1711,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
 
         # Log the event
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug("process_pair_event: #1 { %s: %s => %s }" %
                       (single1, str(oldpos1), str(newpos1)))
             log.debug("process_pair_event: #2 { %s: %s => %s }" %
@@ -1724,7 +1723,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         self.multi_steps[3] += 1  # multi_steps[3]: total multi steps
         multi.step()
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('FIRE MULTI: %s' % multi.last_event)
 
         if(multi.last_event == EventType.MULTI_UNIMOLECULAR_REACTION or
@@ -1763,7 +1762,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # returns a new single that is the result of firing the old single
         # new single also has proper zero shell and is rescheduled
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug('burst single: %s', single)
 
         # Check correct timeline ~ MW
@@ -1787,7 +1786,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # returns two new singles that are the result of firing the pair
         # new singles also have proper zero shell and are rescheduled
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug('burst_pair: %s', pair)
 
         # make sure that the current time is between the last time and the event time
@@ -1811,7 +1810,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
     # -CylindricalSurfaceInteraction
     # -PlanarSurfaceInteraction
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
            log.debug('trying to form Interaction(%s, %s)' % (single.pid_particle_pair[1], surface))
 
 
@@ -1820,7 +1819,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             testShell = try_default_testinteraction(single, surface, self.geometrycontainer, self.domains)
         except testShellError as e:
             testShell = None
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.debug('%s not formed %s' % \
                           ('Interaction(%s, %s)' % (single.pid_particle_pair[0], surface),
                           str(e) ))
@@ -1830,13 +1829,13 @@ class EGFRDSimulator(ParticleSimulatorBase):
         if testShell:
             # make the domain
             interaction = self.create_interaction(testShell)
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('        *Created: %s' % (interaction))
 
             # get the next event time
             interaction.dt, interaction.event_type, = interaction.determine_next_event()
             assert interaction.dt >= 0.0
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('dt=%s' % (FORMAT_DOUBLE % interaction.dt)) 
 
             self.last_time = self.t
@@ -1847,7 +1846,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # add to scheduler
             self.add_domain_event(interaction)
             # check everything is ok
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 assert self.check_domain(interaction)
 
             return interaction
@@ -1862,7 +1861,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
     # Note that single1 is always the single that initiated the creation of the pair
     #  and is therefore no longer in the scheduler
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug('trying to form Pair(%s, %s)' %
                 (single1.pid_particle_pair, single2.pid_particle_pair))
 
@@ -1871,7 +1870,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             testShell = try_default_testpair(single1, single2, self.geometrycontainer, self.domains)
         except testShellError as e:
             testShell = None
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.debug('%s not formed %s' % \
                           ('Pair(%s, %s)' % (single1.pid_particle_pair[0], single2.pid_particle_pair[0]),
                           str(e) ))
@@ -1880,12 +1879,12 @@ class EGFRDSimulator(ParticleSimulatorBase):
         ### 2. If the testShell could be formed, make the complete domain.
         if testShell:
             pair = self.create_pair(testShell)
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('        *Created: %s' % (pair))
 
             pair.dt, pair.event_type, pair.reactingsingle = pair.determine_next_event(pair.r0)
             assert pair.dt >= 0
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('dt=%s' % (FORMAT_DOUBLE % pair.dt)) 
 
             self.last_time = self.t
@@ -1900,7 +1899,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # add to scheduler
             self.add_domain_event(pair)
             # check everything is ok
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 assert self.check_domain(pair)
 
             return pair
@@ -1966,7 +1965,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # In case of new multi
             self.add_domain_event(multi)
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             assert self.check_domain(multi)
 
         return multi
@@ -1976,7 +1975,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
     # adds 'domain' (which can be zero-dt NonInteractionSingle or Multi) to 'multi'
 
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.debug('add_to_multi_recursive.\n domain: %s, multi: %s' % (domain, multi))
 
         if isinstance(domain, NonInteractionSingle):
@@ -1985,7 +1984,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # check that the particles were not already added to the multi previously
             if multi.has_particle(domain.pid_particle_pair[0]):
                 # Already in the Multi.
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.debug('%s already in multi. skipping.' % domain)
                 return
 
@@ -2045,7 +2044,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
             # check that the particles were not already added to the multi previously
             for pp in multi.particles:
                 if domain.has_particle(pp[0]):
-                    if __debug__:
+                    if settings.PERFORM_CHECKS:
                         log.debug('%s already added. skipping.' % domain)
                     break
             else:
@@ -2065,7 +2064,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
     # This method is similar to the 'create_' methods for pair and interaction, except it's now for a multi
     # adding a single to the multi instead of creating a pair or interaction out of single(s)
 
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('add to multi:\n  %s\n  %s' % (single, multi))
 
         shell_id = self.shell_id_generator()
@@ -2081,7 +2080,7 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
     def merge_multis(self, multi1, multi2):
         # merge multi1 into multi2. multi1 will be removed.
-        if __debug__:
+        if settings.PERFORM_CHECKS:
             log.info('merging %s to %s' % (multi1.domain_id, multi2.domain_id))
             log.info('  %s' % multi1)
             log.info('  %s' % multi2)
@@ -2447,11 +2446,11 @@ rejected moves = %d
 
         # check 1: particles don't overlap.
         if new_distance <= particle_radius12:
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.info('rejected move: radii %s, particle distance %s',
                          (FORMAT_DOUBLE % particle1.radius + particle2.radius,
                           FORMAT_DOUBLE % new_distance))
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.debug('DEBUG: pair.dt %s, pos1 %s, pos2 %s' %
                           (FORMAT_DOUBLE % pair.dt, FORMAT_DOUBLE % pos1,
                            FORMAT_DOUBLE % pos2))

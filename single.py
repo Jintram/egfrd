@@ -1,3 +1,5 @@
+import settings
+
 from _gfrd import (
     SphericalShell,
     CylindricalShell,
@@ -196,7 +198,7 @@ class NonInteractionSingle(Single, NonInteractionSingles):
             displacement = self.create_position_vector(r)
 
             # This should be checked in the unit test of random_vector.
-            # if __debug__:
+            # if settings.PERFORM_CHECKS:
             #     scale = self.pid_particle_pair[1].radius
             #     if feq(length(displacement), abs(r), typical=scale) == False:
             #         raise AssertionError('displacement != abs(r): %g != %g.' % 

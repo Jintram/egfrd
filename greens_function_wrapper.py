@@ -1,5 +1,8 @@
 import numpy
 import myrandom
+
+import settings
+
 from _greens_functions import PairEventKind
 from constants import EventType
 from utils import *
@@ -11,7 +14,7 @@ log = logging.getLogger('ecell')
 def draw_time_wrapper(gf):
     rnd = myrandom.uniform()
 
-    if __debug__:
+    if settings.PERFORM_CHECKS:
         log.debug('        *drawTime. ' + gf.__class__.__name__)
     try:
         dt = gf.drawTime(rnd)
@@ -24,7 +27,7 @@ def draw_time_wrapper(gf):
 def draw_event_type_wrapper(gf, dt):
     rnd = myrandom.uniform()
 
-    if __debug__:
+    if settings.PERFORM_CHECKS:
         log.debug('        *drawEventType. ' + gf.__class__.__name__)
     try:
         event_type = gf.drawEventType(rnd, dt)
@@ -37,12 +40,12 @@ def draw_event_type_wrapper(gf, dt):
 def draw_r_wrapper(gf, dt, a, sigma=None):
     rnd = myrandom.uniform()
 
-    if __debug__:
+    if settings.PERFORM_CHECKS:
         log.debug('        *drawR. ' + gf.__class__.__name__)
     try:
         r = gf.drawR(rnd, dt)
         while r > a or r <= sigma: # redraw; shouldn't happen often
-            if __debug__:
+            if settings.PERFORM_CHECKS:
                 log.debug('        *drawR: redraw')
             rnd = myrandom.uniform()
             r = gf.drawR(rnd, dt)
@@ -63,7 +66,7 @@ def draw_theta_wrapper(gf, r, dt):
     # positive.
     rnd = myrandom.uniform()
 
-    if __debug__:
+    if settings.PERFORM_CHECKS:
         log.debug('        *drawTheta. ' + gf.__class__.__name__)
     try:
         theta = gf.drawTheta(rnd, r, dt)

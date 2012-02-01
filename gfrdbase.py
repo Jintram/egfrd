@@ -6,6 +6,7 @@ import sys
 import numpy
 import scipy
 
+import settings
 
 import _gfrd
 from utils import *
@@ -189,7 +190,7 @@ def throw_in_particles(world, sid, n):
     species = world.get_species(sid)
     structure = world.get_structure(species.structure_id)
 
-    if __debug__:
+    if settings.PERFORM_CHECKS:
         name = world.model.get_species_type_by_id(sid)["name"]
         if name[0] != '(':
             name = '(' + name + ')'
@@ -212,7 +213,7 @@ def throw_in_particles(world, sid, n):
                 surface, distance = get_closest_surface(world, position, [])
                 if(surface and
                    distance < surface.minimal_distance(species.radius)):
-                    if __debug__:
+                    if settings.PERFORM_CHECKS:
                         log.info('\t%d-th particle rejected. Too close to '
                                  'surface. I will keep trying.' % i)
                     create = False
@@ -220,9 +221,9 @@ def throw_in_particles(world, sid, n):
                 # All checks passed. Create particle.
                 p = world.new_particle(sid, position)
                 i += 1
-                if __debug__:
+                if settings.PERFORM_CHECKS:
                     log.info('(%s,\n %s' % (p[0], p[1]))
-        elif __debug__:
+        elif settings.PERFORM_CHECKS:
             log.info('\t%d-th particle rejected. I will keep trying.' % i)
 
 def place_particle(world, sid, position):
@@ -257,7 +258,7 @@ def place_particle(world, sid, position):
                                'Too close to surface: %s.' %
                                (sid, position, distance))
 
-    if __debug__:
+    if settings.PERFORM_CHECKS:
         species = world.get_species(sid)
         structure = world.get_structure(species.structure_id)
         name = world.model.get_species_type_by_id(sid)["name"]
