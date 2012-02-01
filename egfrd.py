@@ -1450,20 +1450,21 @@ class EGFRDSimulator(ParticleSimulatorBase):
 
         else:
         ### 1. Process 'normal' event produced by the single
-            ### log Single event
             if settings.PERFORM_CHECKS:
+                ### log Single event            
                 log.info('FIRE SINGLE: %s' % single.event_type)
                 log.info('single = %s' % single)
 
-            if single.event_type != EventType.BURST:
-                # The burst of the domain may be caused by an overlapping domain
-                assert self.check_domain(single)
+                ### Checks
+                if single.event_type != EventType.BURST:
+                    # The burst of the domain may be caused by an overlapping domain
+                    assert self.check_domain(single)
 
-            # check that the event time of the single (last_time + dt) is equal to the
-            # simulator time
-            assert (abs(single.last_time + single.dt - self.t) <= TIME_TOLERANCE * self.t), \
-                'Timeline incorrect. single.last_time = %s, single.dt = %s, self.t = %s' % \
-                (FORMAT_DOUBLE % single.last_time, FORMAT_DOUBLE % single.dt, FORMAT_DOUBLE % self.t)
+                # check that the event time of the single (last_time + dt) is equal to the
+                # simulator time
+                assert (abs(single.last_time + single.dt - self.t) <= TIME_TOLERANCE * self.t), \
+                    'Timeline incorrect. single.last_time = %s, single.dt = %s, self.t = %s' % \
+                    (FORMAT_DOUBLE % single.last_time, FORMAT_DOUBLE % single.dt, FORMAT_DOUBLE % self.t)
 
 
             pid_particle_pair = single.pid_particle_pair
