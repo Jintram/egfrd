@@ -1668,32 +1668,17 @@ class EGFRDSimulator(ParticleSimulatorBase):
             log.info('single1 = %s' % pair.single1)
             log.info('single2 = %s' % pair.single2)
 
-<<<<<<< HEAD:egfrd.py
             ### 1. check that everything is ok
-=======
-        ### 1. check that everything is ok
-        if __debug__:
-            assert (pair.domain_id in ignore), \
-                   'Domain_id should already be on ignore list before processing event.'
->>>>>>> 0c68e59a02f02dab673b084928e741276ed4e27f:egfrd.py
             assert self.check_domain(pair)
             assert pair.single1.domain_id not in self.domains
             assert pair.single2.domain_id not in self.domains
             # TODO assert that there is no event associated with this domain in the scheduler
 
-<<<<<<< HEAD:egfrd.py
             # check that the event time of the single (last_time + dt) is equal to the
             # simulator time
             assert (abs(pair.last_time + pair.dt - self.t) <= TIME_TOLERANCE * self.t), \
                 'Timeline incorrect. pair.last_time = %s, pair.dt = %s, self.t = %s' % \
                 (FORMAT_DOUBLE % pair.last_time, FORMAT_DOUBLE % pair.dt, FORMAT_DOUBLE % self.t)
-=======
-            # check that the event time of the pair (last_time + dt) is equal to the
-            # simulator time
-            assert (abs(pair.last_time + pair.dt - self.t) <= TIME_TOLERANCE * self.t), \
-                    'Timeline incorrect. pair.last_time = %s, pair.dt = %s, self.t = %s' % \
-                    (FORMAT_DOUBLE % pair.last_time, FORMAT_DOUBLE % pair.dt, FORMAT_DOUBLE % self.t)
->>>>>>> 0c68e59a02f02dab673b084928e741276ed4e27f:egfrd.py
 
         ### 2. get some necessary information
         single1 = pair.single1
