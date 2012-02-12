@@ -19,8 +19,8 @@ class Multi(Domain, hasSphericalShell, Others):
         #       Only the methods of the hasSphericalShell class are used
 
         self.main = ref(main)
-        self.last_event = None
-        self.event_Type = EventType.MULTI_DIFFUSION
+        self.last_event = EventType.MULTI_DIFFUSION     #None
+#        self.event_type = EventType.MULTI_DIFFUSION
 
         self.sphere_container = _gfrd.SphericalShellContainer(main.world.world_size, 3)
         self.particle_container = _gfrd.MultiParticleContainer(main.world)
@@ -53,11 +53,10 @@ class Multi(Domain, hasSphericalShell, Others):
         return self.particle_container.num_particles
     multiplicity = property(get_multiplicity)
 
-#    def create_new_shell(self, position, radius):
-#        return SphericalShell(self.domain_id, Sphere(position, radius))
-
     def within_shell(self, pp):
-        return bool(self.sphere_container.get_neighbors_within_radius(pp[1].position, -(pp[1].radius + self.reaction_length)))
+        # test if pid_particle_pair 'pp' is within at least one shell.
+        shells = self.sphere_container.get_neighbors_within_radius(pp[1].position, -(pp[1].radius + self.reaction_length))
+        return len(shells) >= 1
 
     def add_shell(self, shell_id_shell_pair):
         if __debug__:
@@ -98,7 +97,7 @@ class Multi(Domain, hasSphericalShell, Others):
                         shape.position, -(shape.radius + self.outer_.reaction_length) ))
                 if not within_radius:
                     main = self.outer_.main()
-                    if self.outer_.last_event == None:
+                    if self.outer_.last_event == EventType.MULTI_DIFFUSION: #None:
                         self.outer_.last_event = EventType.MULTI_ESCAPE
                     main.burst_volume(shape.position, shape.radius, 
                                       ignore=[self.outer_.domain_id, ])
@@ -117,7 +116,7 @@ class Multi(Domain, hasSphericalShell, Others):
                      myrandom.rng, self.dt, main.dissociation_retry_moves, self.reaction_length,
                      cr, vc, [pid for pid, _ in self.particle_container])
 
-        self.last_event = None        
+        self.last_event = EventType.MULTI_DIFFUSION     #None
         while ppg():
             if cr.reactions:
                 self.last_reaction = cr.reactions[-1]
@@ -137,7 +136,7 @@ class Multi(Domain, hasSphericalShell, Others):
         #         return
 
         #     if not self.within_shell(pid_particle_pair):
-        #         if self.last_event == None:
+        #         if self.last_event == EventType.MULTI_DIFFUSION   #None:
         #             self.last_event = EventType.MULTI_ESCAPE
         #         main.clear_volume(
         #             pid_particle_pair[1].position,
@@ -150,10 +149,10 @@ class Multi(Domain, hasSphericalShell, Others):
         assert self.multiplicity == self.num_shells, \
             'number of particles is not equal to number of shells'
         # Event is DIFFUSION, SINGLE_REACTION, BIMOL_REACTION, ESCAPE
-        assert self.event_Type == EventType.MULTI_DIFFUSION or \
-               self.event_Type == EventType.MULTI_ESCAPE or \
-               self.event_Type == EventType.MULTI_UNIMOLECULAR_REACTION or \
-               self.event_Type == EventType.MULTI_BIMOLECULAR_REACTION, \
+        assert self.last_event == EventType.MULTI_DIFFUSION or \
+               self.last_event == EventType.MULTI_ESCAPE or \
+               self.last_event == EventType.MULTI_UNIMOLECULAR_REACTION or \
+               self.last_event == EventType.MULTI_BIMOLECULAR_REACTION, \
                     'event_type of Multi was not of proper type'
 
         # check that the shells of the multi are contiguous
@@ -214,9 +213,9 @@ class Multi(Domain, hasSphericalShell, Others):
         # except:
         #     return False
 
-    def particles(self):
+    def get_particles(self):
         return iter(self.particle_container)
-    particles = property(particles)
+    particles = property(get_particles)
 
     def num_shells(self):
         return len(self.sphere_container)
