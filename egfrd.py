@@ -1548,10 +1548,11 @@ class EGFRDSimulator(ParticleSimulatorBase):
         # Process 'normal' event produced by the single
         else:
             if __debug__:
-                ### log Single event            
                 log.info('FIRE SINGLE: %s' % single.event_type)
                 log.info('single = %s' % single)
 
+            ### 1. check that everything is ok
+            if __debug__:
                 if single.event_type != EventType.BURST:
                     # The burst of the domain may be caused by an overlapping domain
                     assert self.check_domain(single)
@@ -1559,8 +1560,9 @@ class EGFRDSimulator(ParticleSimulatorBase):
                 # check that the event time of the single (last_time + dt) is equal to the
                 # simulator time
                 assert (abs(single.last_time + single.dt - self.t) <= TIME_TOLERANCE * self.t), \
-                    'Timeline incorrect. single.last_time = %s, single.dt = %s, self.t = %s' % \
-                    (FORMAT_DOUBLE % single.last_time, FORMAT_DOUBLE % single.dt, FORMAT_DOUBLE % self.t)
+                       'Timeline incorrect. single.last_time = %s, single.dt = %s, self.t = %s' % \
+                        (FORMAT_DOUBLE % single.last_time, FORMAT_DOUBLE % single.dt, FORMAT_DOUBLE % self.t)
+
 
             ### 2. get some necessary information
             pid_particle_pair = single.pid_particle_pair
@@ -1668,17 +1670,20 @@ class EGFRDSimulator(ParticleSimulatorBase):
             log.info('single1 = %s' % pair.single1)
             log.info('single2 = %s' % pair.single2)
 
-            ### 1. check that everything is ok
+        ### 1. check that everything is ok
+        if __debug__:
+            assert (pair.domain_id in ignore), \
+                   'Domain_id should already be on ignore list before processing event.'
             assert self.check_domain(pair)
             assert pair.single1.domain_id not in self.domains
             assert pair.single2.domain_id not in self.domains
             # TODO assert that there is no event associated with this domain in the scheduler
 
-            # check that the event time of the single (last_time + dt) is equal to the
+            # check that the event time of the pair (last_time + dt) is equal to the
             # simulator time
             assert (abs(pair.last_time + pair.dt - self.t) <= TIME_TOLERANCE * self.t), \
-                'Timeline incorrect. pair.last_time = %s, pair.dt = %s, self.t = %s' % \
-                (FORMAT_DOUBLE % pair.last_time, FORMAT_DOUBLE % pair.dt, FORMAT_DOUBLE % self.t)
+                    'Timeline incorrect. pair.last_time = %s, pair.dt = %s, self.t = %s' % \
+                    (FORMAT_DOUBLE % pair.last_time, FORMAT_DOUBLE % pair.dt, FORMAT_DOUBLE % self.t)
 
         ### 2. get some necessary information
         single1 = pair.single1
