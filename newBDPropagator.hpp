@@ -642,7 +642,7 @@ private:
                                         (s0.D() + s1.D()))) );
 
 //                        position_type new_pos (tx_.calculate_pair_CoM(pp0.second.position(), pp1.second.position()), s0.D(), s1.D());
-                        structure_id_type new_structure_id;
+                        structure_id_type new_structure_id(pp0.second.structure_id());
 
                         //For unequal structures, project new_pos on surface.
                         if(product_species.structure_type_id() != s1.structure_type_id())
@@ -705,6 +705,7 @@ private:
                         tx_.remove_particle(pp0.first);
                         remove_particle(pp1.first);
                         // Make new particle on right structure
+//                        std::cout << "new_structure_id" << new_structure_id << std::endl;
                         particle_id_pair product_particle(tx_.new_particle(product_species.id(), new_structure_id, new_pos));
                         // Record changes
                         if (rrec_)
@@ -936,10 +937,10 @@ private:
         {
             queue_.erase(i);
         }
-        else
-        {
-            throw not_found(std::string("Unknown particle (id=") + boost::lexical_cast<std::string>(pid) + ")");
-        }
+//        else
+//        {
+//            throw not_found(std::string("Unknown particle (id=") + boost::lexical_cast<std::string>(pid) + ")");
+//        }
     }
 
 

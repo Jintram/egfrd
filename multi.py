@@ -11,6 +11,7 @@ from domain import Domain
 from shells import (hasSphericalShell, Others)
 
 import os
+import sys #todo: only needed this for debug purpose (print to error stream)
 
 class Multi(Domain, hasSphericalShell, Others):
     def __init__(self, domain_id, main, step_size_factor):
@@ -118,6 +119,7 @@ class Multi(Domain, hasSphericalShell, Others):
 
         self.last_event = EventType.MULTI_DIFFUSION     #None
         while ppg():
+            print >> sys.stderr, "newBDstep" 
             if cr.reactions:
                 self.last_reaction = cr.reactions[-1]
                 if len(self.last_reaction.reactants) == 1:
