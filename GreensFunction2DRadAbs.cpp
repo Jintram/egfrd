@@ -1,11 +1,18 @@
 // Greens function class for 2d Green's Function for 2d annulus with radial and
-// axial dependence. Inner boundary is radiative (rad) (reaction event), outer 
+// axial dependence. 
+// It is used for the pair interparticle sub domain and for particles around 
+// a rod. The inner boundary is radiative (rad) (reaction event), outer 
 // boundary is absorbing (abs) (escape event). Different "draw" functions 
 // provide a way to draw certain values from the Green's Function, e.g. an
 // escape angle theta ("drawTheta" function).
 // 
+// The Green functions themselves can be found in:
+// /doc/greens_functions/greensFunctions.pdf
+// this will from now on be referred to as greensFunctions.pdf.
+//
 // Based upon code from Riken Institute. 
-// Written by Laurens Bossen, Adapted by Martijn Wehrens. FOM Institute AMOLF.
+// Written by Laurens Bossen, Adapted by Martijn Wehrens (wehrens@amolf.nl). 
+// FOM Institute AMOLF.
 
 //#define NDEBUG
 //#define BOOST_DISABLE_ASSERTS
@@ -41,6 +48,28 @@ const unsigned int GreensFunction2DRadAbs::MAX_ALPHA_SEQ;
 
 
 // This is the constructor
+//
+// It clears the alpha table (see clearAlphaTable) and stores the input 
+// variables that are given to the function. Furthermore it calls parent
+// constructors, which in this case are also involved in handling the
+// input parameters. Finally a simple check is build in to ensure the
+// input parameters make sense.
+//
+// The input parameters are:
+//      - D:        Diffusion constant
+//      - kf:       Reaction rate (inner boundary)
+//      - r0:       The starting location of the (inter)particle vector
+//      - Sigma:    The location of the inner (radiative) boundary
+//      - a:        The lcoation of the outer (absorbing) boundary
+//
+// Some parameters that are calculated from the input parameters:
+//      - h:        A convenient parameter defined in greensFunctions.pdf for 
+//                  for calculating the output.
+//      - estimated_alpha_root_distance:
+//                  The output of this function is dependent on the roots
+//                  of yet another function (see below and greensFunctions.pdf)
+//                  , the distance between these roots needs to be estimated 
+//                  to determine them later on in the algorithm.
 GreensFunction2DRadAbs::
 GreensFunction2DRadAbs( const Real D, 
                         const Real kf,
@@ -53,27 +82,23 @@ GreensFunction2DRadAbs( const Real D,
     a( a ),                                    
     estimated_alpha_root_distance_(M_PI/(a-Sigma)) // observed convergence of
                                                    // distance roots f_alpha().
-    // ^: Here parent "constructors" are specified that are executed, 
-    // also a constructor initialization list can be (and is) specified. 
-    // These variables will be set before the contents of the constructor are 
-    // called.
 {
-  
+    // Needed for check below.     
     const Real sigma(this->getSigma());
 
     // Check wether input makes sense, outer boundary a should be > inner 
-    // boundary sigma.    
+    // boundary sigma.        
     if (a < sigma)
     {
         throw std::invalid_argument((boost::format("GreensFunction2DRadAbs: a >= sigma : a=%.16g, sigma=%.16g") % a % sigma).str());
     }
     
-    // Clear AlphaTables
-    GreensFunction2DRadAbs::clearAlphaTable();
-    
+    // Clear AlphaTables (see clearAlphaTable for more comments)
+    GreensFunction2DRadAbs::clearAlphaTable();   
 
 }
 
+// Destructor
 GreensFunction2DRadAbs::~GreensFunction2DRadAbs()
 {
     ; // do nothing
@@ -82,8 +107,43 @@ GreensFunction2DRadAbs::~GreensFunction2DRadAbs()
 
 //
 // Alpha-related methods
+// ===
+// As mentioned the output of the 2DRadAbs function depends on the roots of 
+// yet another function (called f_alpha here; see below). These root values
+// are called the alpha values. These roots are numbered using two parameters: m
+// and n. f_alpha is also determined by the n value, which changes the order
+// of constituent functions of f_alpha. m simply means it is the mth root
+// of the f_alpha function. The (m,n) root, or alpha(m, n), thus means
+// we're talking about the mth root of the nth order f_alpha function.
 //
+// f_alpha is function (0.0.64) in greensFunctions.pdf; unfortunately
+// the meaning of m and n are reversed in (0.0.64). [A TODO!]
+//
+// The values of these alphas are stored in tables which are members of this 
+// Green's function class.
+
+
 // Resets the alpha-tables
+// ===
+// Actually, multiple tables are handled here. 
+// First of all, the tables containing the roots (see above), alphaTable, needs 
+// to be reset to avoid it containing rubbish (inherent to the c++ variable 
+// handling). 
+// Second, when the algorithm starts searching for the roots, or continues
+// finding roots (the class functions can be called multiple times. It might be
+// that it doesn't need so many roots the first time, and thus calculates less 
+// roots the first time, and thus stop root-finding; the second time it gets
+// called, the roots calculated the first time are still stored, and it needs
+// to continue searching where it left of), it starts searching at the location
+// specified by alpha_x_scan_table_. Because roots need to be calculated
+// for multiple orders (n) this is a table. In this function these values are
+// set to an estimate distance smaller than the distance at which the root
+// is thought to lie, but >x=0.
+// Finally, the alpha_correctly_estimated_ (see definition for comments)
+// is also set to zero.
+//
+// See also the comments at the definition of the alpha_x_scan_table_ and
+// alpha_correctly_estimated_ table.
 void GreensFunction2DRadAbs::clearAlphaTable() const
 {
   
@@ -93,7 +153,7 @@ void GreensFunction2DRadAbs::clearAlphaTable() const
     std::for_each( this->alphaTable.begin(), this->alphaTable.end(),
                   boost::mem_fn( &RealVector::clear ) );
                   
-    // Sets all values of the alpha_x_scan_table_ to zero.
+    // Sets all values of the alpha_x_scan_table_ to their starting positions.
     std::fill( this->alpha_x_scan_table_.begin(), 
               this->alpha_x_scan_table_.end(),
                   SCAN_START*estimated_alpha_root_distance);
@@ -106,9 +166,9 @@ void GreensFunction2DRadAbs::clearAlphaTable() const
                   0 );                 
 }
 
-
-// The method evaluates the equation for finding the alphas for given alpha. This
-// is needed to find the alpha's at which the expression is zero -> alpha is the root.
+// (TODO: I was here updating the comments)
+// The method evaluates the equation for finding the alphas for given alpha. 
+// This is needed to find the alpha's at which the expression is zero -> alpha is the root.
 const Real 
 GreensFunction2DRadAbs::f_alpha0( const Real alpha ) const
 {
