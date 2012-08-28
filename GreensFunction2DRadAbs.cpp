@@ -6,7 +6,13 @@
 // provide a way to draw certain values from the Green's Function, e.g. an
 // escape angle theta ("drawTheta" function).
 // 
-// The Green functions themselves can be found in:
+// The Green's functions are calculated in the master thesis written by
+// Laurens Bossen, which will be referred to as (Bossen, 2010):
+// L. Bossen, “Integrating Membranes into the enhanced Green’s Function Re-
+// action Dynamics algorithm,” master thesis, Universiteit van Amsterdam,
+// 2010.
+//
+// The Green functions used are also provided in:
 // /doc/greens_functions/greensFunctions.pdf
 // this will from now on be referred to as greensFunctions.pdf.
 //
@@ -109,12 +115,14 @@ GreensFunction2DRadAbs::~GreensFunction2DRadAbs()
 // Alpha-related methods
 // ===
 // As mentioned the output of the 2DRadAbs function depends on the roots of 
-// yet another function (called f_alpha here; see below). These root values
-// are called the alpha values. These roots are numbered using two parameters: m
-// and n. f_alpha is also determined by the n value, which changes the order
-// of constituent functions of f_alpha. m simply means it is the mth root
-// of the f_alpha function. The (m,n) root, or alpha(m, n), thus means
-// we're talking about the mth root of the nth order f_alpha function.
+// yet another function (called f_alpha - from f(alpha) - here; see below). 
+// The root values are called the alpha[m,n] values. The roots are numbered 
+// using two parameters: m and n. f(alpha) is also determined by an order 
+// parameter, n, (perhaps f(alpha)_n or f_alpha_n would have been a more 
+// appropriate name,) which changes the order of constituent functions of 
+// f(alpha). m simply means it is the mth root of the f_alpha_n function. 
+// The (m,n) root, or alpha[m, n], thus means we're talking about the mth root
+// of the nth order f_alpha function.
 //
 // f_alpha is function (0.0.64) in greensFunctions.pdf; unfortunately
 // the meaning of m and n are reversed in (0.0.64). [A TODO!]
@@ -166,22 +174,32 @@ void GreensFunction2DRadAbs::clearAlphaTable() const
                   0 );                 
 }
 
-// (TODO: I was here updating the comments)
-// The method evaluates the equation for finding the alphas for given alpha. 
-// This is needed to find the alpha's at which the expression is zero -> alpha is the root.
+// f(alpha)_n=0
+// ===
+// As mentioned, the 2DRadAbs Green's function depends on the roots of a second
+// function. This function is called f_alpha here (from f(alpha)). As also 
+// already mentioned: this function can have different orders. f_alpha0 is a 
+// special case of this function, where the 0 indicates that the order n=0. 
+//
+// f_alpha is function (0.0.64) in greensFunctions.pdf; unfortunately
+// the meaning of m and n are reversed in (0.0.64).
 const Real 
 GreensFunction2DRadAbs::f_alpha0( const Real alpha ) const
 {
 
-    const Real a( this->geta() );
-    const Real sigma( getSigma() );
-    const Real h( this->geth() );
-    const Real s_An( sigma * alpha );
-    const Real a_An( a * alpha );
-    // Needed? TODO
-//  const Real h_s( h * sigma);
+    const Real a( this->geta() );   // outer boundary
+    const Real sigma( getSigma() ); // inner boundary
+    const Real h( this->geth() );   // factor
 
-    const double J0_s_An (gsl_sf_bessel_J0(s_An));
+    const Real s_An( sigma * alpha );   // simply a factor
+    const Real a_An( a * alpha );       // simply a factor
+    // Alternative style
+    // const Real h_s( h * sigma);
+
+    // The f(alpha) function is build up of Bessel functions. Function
+    // values of specific bessel values for the alpha value currently
+    // evaluated are evaluated here.
+    const double J0_s_An (gsl_sf_bessel_J0(s_An)); 
     const double J1_s_An (gsl_sf_bessel_J1(s_An));
     const double J0_a_An (gsl_sf_bessel_J0(a_An));
 
@@ -189,24 +207,25 @@ GreensFunction2DRadAbs::f_alpha0( const Real alpha ) const
     const double Y1_s_An (gsl_sf_bessel_Y1(s_An));
     const double Y0_a_An (gsl_sf_bessel_Y0(a_An));	
 
-//  const double rho1 ( ( (h_s * J0_s_An) + (s_An * J1_s_An) ) * Y0_a_An );
-//  const double rho2 ( ( (h_s * Y0_s_An) + (s_An * Y1_s_An) ) * J0_a_An );
-//  return (rho1 - rho2); 
+    // Alternative style
+    //  const double rho1 ( ( (h_s * J0_s_An) + (s_An * J1_s_An) ) * Y0_a_An );
+    //  const double rho2 ( ( (h_s * Y0_s_An) + (s_An * Y1_s_An) ) * J0_a_An );
+    //  return (rho1 - rho2); 
+    // (Sigma can be divided out, roots will remain same.)
 
-    // Sigma can be divided out, roots will remain same:
-    // (Note: actually double checked this).
+    // f(alpha)_n = rho1 - rho2
+    // rho1 and rho2 are calculated here
     const double rho1 ( ( (h * J0_s_An) + (alpha * J1_s_An) ) * Y0_a_An );
     const double rho2 ( ( (h * Y0_s_An) + (alpha * Y1_s_An) ) * J0_a_An );
 
     return rho1 - rho2;
 }
 
-
-// Wraps function of which we need to find roots alpha.
-//
-// Params contains pointer to gf object (params.gf), where f_alpha is the member
-// function of which we have to find the roots. This function is thus a mere
-// wrapper of f_alpha.  
+// Wrapper of f_alpha
+// ===
+// Params contains pointer to Green's function object (params.gf), where f_alpha 
+// is the member function of which we have to find the roots (see above). This 
+// function is thus a mere wrapper of f_alpha.  
 const Real 
 GreensFunction2DRadAbs::f_alpha0_aux_F( const Real alpha,
                                                 const f_alpha0_aux_params* const params )
@@ -217,21 +236,28 @@ GreensFunction2DRadAbs::f_alpha0_aux_F( const Real alpha,
     return gf->f_alpha0( alpha );
 }
 
-
-// f_alpha() Calculates the value of the mathematical function f_alpha(). The
-// roots (y=0) of this function are constants in the Green's Functions.
+// f(alpha)_n
+// ===
+// (See also f_alpha0)
+// As mentioned, the 2DRadAbs Green's function depends on the roots (i.e. y=0)
+// of a second function. This function is called f_alpha here (from f(alpha)). 
+// As also already mentioned: this function can have different orders (n).
+//
+// f_alpha is function (0.0.64) in greensFunctions.pdf; unfortunately
+// the meaning of m and n are reversed in (0.0.64).
 const Real GreensFunction2DRadAbs::f_alpha( const Real alpha,
                                                     const Integer n ) const
 {
   
-    const Real a( this->geta() );
-    const Real sigma( getSigma() );
-    const Real h( this->geth() );
-    const Real s_An( sigma * alpha );
-    const Real a_An( a * alpha );	
-    const Real realn( static_cast<Real>( n ) );
-    const Real h_sigma( h * sigma);
+    const Real a( this->geta() );               // outer boundary
+    const Real sigma( getSigma() );             // inner boundary
+    const Real h( this->geth() );               // factor
+    const Real s_An( sigma * alpha );           // factor
+    const Real a_An( a * alpha );	            // factor
+    const Real realn( static_cast<Real>( n ) ); // n
+    const Real h_sigma( h * sigma);             // factor
 
+    // Evaluation of f_alpha's constituent Bessel functions
     const double Jn_s_An (gsl_sf_bessel_Jn(n,s_An));
     const double Jn1_s_An (gsl_sf_bessel_Jn(n+1,s_An));
     const double Jn_a_An (gsl_sf_bessel_Jn(n,a_An));
@@ -240,14 +266,16 @@ const Real GreensFunction2DRadAbs::f_alpha( const Real alpha,
     const double Yn1_s_An (gsl_sf_bessel_Yn(n+1,s_An));
     const double Yn_a_An (gsl_sf_bessel_Yn(n,a_An));
 
+    // f(alpha)_n = rho1 - rho2
+    // rho1 and rho2 are calculated here
     const double rho1 ( ( (h_sigma * Jn_s_An) + (s_An * Jn1_s_An) - realn*Jn_s_An ) * Yn_a_An );
     const double rho2 ( ( (h_sigma * Yn_s_An) + (s_An * Yn1_s_An) - realn*Yn_s_An ) * Jn_a_An );
     return (rho1 - rho2); 
 
-//  Or..?
-//  const double rho1 ( ( ((h*sigma-realn) * Jn_s_An) + (s_An * Jn1_s_An) ) * Yn_a_An );
-//  const double rho2 ( ( ((h*sigma-realn) * Yn_s_An) + (s_An * Yn1_s_An) ) * Jn_a_An );
-//  return (rho1 - rho2);
+    //  Alternatively
+    //  const double rho1 ( ( ((h*sigma-realn) * Jn_s_An) + (s_An * Jn1_s_An) ) * Yn_a_An );
+    //  const double rho2 ( ( ((h*sigma-realn) * Yn_s_An) + (s_An * Yn1_s_An) ) * Jn_a_An );
+    //  return (rho1 - rho2);
       
 } 
 
@@ -266,17 +294,22 @@ GreensFunction2DRadAbs::f_alpha_aux_F( const Real alpha,
 }
 
 
-// calculates the constant part of the i-th term for the survival probability
+// Calculates the constant part of the ith term for the survival probability
+// ===
+// The background of this function can be found in section 4.2.3. "Drawing the
+// first passage time" of (Bossen, 2010), where equation (50) and (51) are
+// most informative.
+// (Where i is used here, (Bossen, 2010) uses n).
 const Real 
 GreensFunction2DRadAbs::p_survival_i( const Real alpha) const
 {
   
-    const Real a( geta() );         // get the needed parameters
-    const Real sigma( getSigma() );
+    const Real a( geta() );         // outer boundary
+    const Real sigma( getSigma() ); // inner boundary
 
-    const Real s_An (sigma*alpha);
-    const Real a_An (a*alpha);
-    const Real alpha_sq (alpha*alpha);
+    const Real s_An (sigma*alpha);      // factor
+    const Real a_An (a*alpha);          // factor
+    const Real alpha_sq (alpha*alpha);  // alpha squared
 
     // calculate all the required Bessel functions
     const Real J1_sAn  (gsl_sf_bessel_J1(s_An));
@@ -292,7 +325,7 @@ GreensFunction2DRadAbs::p_survival_i( const Real alpha) const
     // this is only the part without alpha of dB0,n(sigma)/dr
     const Real B_n_0_int (Real(2.0)/(M_PI*alpha_sq) - (sigma/alpha)*dB_n_0dr);
 
-    // return the total result
+    // Calculate the result
     const Real result (C_i_0 * B_n_0_int);
     
     return result;
@@ -367,7 +400,12 @@ GreensFunction2DRadAbs::leaves_i( const Real alpha) const
 }
 
 
-// calculates a table with all the constant factors for the survival probability
+// Calculates a table with all the constant factors for the survival probability
+// ===
+// The survival probability (0.0.65) in greensFunctions.pdf contains a sum.
+// (This sum needs to converge to be able to calculate a value of the Green's
+// function.) The different values of this sum are calculated here and 
+// stored in a table (to be summed over later).
 void 
 GreensFunction2DRadAbs::createPsurvTable( RealVector& table) const
 {
@@ -385,8 +423,9 @@ GreensFunction2DRadAbs::createPsurvTable( RealVector& table) const
                                                 // the result is passed to back_inserter
 }
 
-
-// Creates the tables with various Bessel functions used in drawR, the table is used to speed things up
+// To calculate the Green's function, Bessel functions need to be evaluated
+// at specific values (see (Bossen, 2010)). Here tables with values of the 
+// various Bessel functions used in drawR, the table is used to speed things up.
 void
 GreensFunction2DRadAbs::createY0J0Tables( RealVector& Y0_Table,
                                                         RealVector& J0_Table,
@@ -394,20 +433,26 @@ GreensFunction2DRadAbs::createY0J0Tables( RealVector& Y0_Table,
                                                         const Real t ) const
 {
   
+    // get the roots for the survival probability
     const RealVector& alphaTable_0( this->getAlphaTable( 0 ) );
-                                                // get the roots for the survival probability
-    Y0_Table.clear();                           // empty the table
+                                                
+    // empty the tables
+    Y0_Table.clear();                           
     J0_Table.clear();
     Y0J1J0Y1_Table.clear();
 
-    Y0_Table.reserve( alphaTable_0.size() );    // and get the nescessary memory
+    // and reserve the nescessary memory
+    Y0_Table.reserve( alphaTable_0.size() );    
     J0_Table.reserve( alphaTable_0.size() );
     Y0J1J0Y1_Table.reserve( alphaTable_0.size() );
 
     boost::tuple<Real,Real,Real> result;
 
+    // loop over the table
     for (unsigned int count = 0; count < alphaTable_0.size(); count++)
-    {       result = Y0J0J1_constants(alphaTable_0[count], t);
+    {       
+            // obtaining values of different Bessel functions, see below
+            result = Y0J0J1_constants(alphaTable_0[count], t);
 
             Y0_Table.push_back (result.get<0>());
             J0_Table.push_back (result.get<1>());
@@ -415,8 +460,7 @@ GreensFunction2DRadAbs::createY0J0Tables( RealVector& Y0_Table,
     }
 }
 
-
-// Creates the values for in the tables Y0, J0 and Y0J1J0Y1
+// Creates the values for in the tables Y0, J0 and Y0J1J0Y1 above
 const boost::tuple<Real,Real,Real>
 GreensFunction2DRadAbs::Y0J0J1_constants ( const Real alpha,
                                                         const Real t) const
@@ -451,46 +495,54 @@ GreensFunction2DRadAbs::Y0J0J1_constants ( const Real alpha,
     return boost::make_tuple (Ai0_expT*Y0_aAn, Ai0_expT*J0_aAn, Ai0_expT*Y0J1_J0Y1);
 }
 
-
-// =============================================================================
-// Root finding algorithm for alpha function. 
-// Roots (y=0) are necessary to calculate 
-// Modified by wehrens@amolf.nl. nov, 2011
-//
-// Note mar 2012:
+// As mentioned above, the Green's function depends on the roots (y=0) of 
+// a second function, named f(alpha)_n. All the function below handle this root
+// finding.
+// 
+// Note:
 // The modified root finding algorithm can only work if the roots are calculated
 // in a "chronological" sequence (i.e. i = 0, i = 1, i = 2 etc). Therefore roots
-// are now all calculated immediately when the roots-table is expanded.
+// are all calculated immediately when the roots-table is expanded.
 // =============================================================================
 
-// Scans for next interval where a sign change is observed, and thus where a 
-// root is expected. 
+// Scans for next interval where a sign change in f(alpha) is observed, and 
+// thus where a root is expected. 
+// In this function sometimes the more general x is used instead of alpha.
 const void GreensFunction2DRadAbs::GiveRootInterval(
             Real& low,             // Variable to return left boundary interval
             Real& high,            // Variable to return right boundary interval
             const Integer n) const // Order of Bessel functions
 {
-    // Variables for function values @ resp. left and right boundary interval.
+    // Variables for function values @ resp. left and right boundary of 
+    // the interval under "current inspection".
     Real f_low , f_high;
     
-    // # Get/calculate boundaries and determine width of interval to check for
-    // sign change.
+    // Determine the size of the interval in which is scanned by multiplying
+    // the estimated distance between roots with a factor <1.
     const Real estimated_alpha_root_distance_( this->getestimated_alpha_root_distance_() );
     const Real interval( FRACTION_SCAN_INTERVAL * estimated_alpha_root_distance_);
-                                                        
-    // If order (n) is zero, the offset is zero, otherwhise take n-1 offset
-    // value as first estimate.
+                               
+    // If the roots where already found for lower order evaluations of 
+    // f(alpha)_n, then the search for roots can be started at a higher
+    // value of alpha, thus already start at an offset.
+    //      Obviously, if the order (n) is zero, the offset is zero, but 
+    // otherwhise the root value of the root calculated for n-1 is taken as 
+    // offset.
     //      (This can be done because the offsets only get bigger, the roots 
     // shift to the right with the order of the Bessel functions n.)   
-    if (alpha_x_scan_table_[n] == 0) { // which implies i == 0   
+
+    // Only do this for the first root, i.e. alpha_x_scan_table_[n] == 0.
+    // (alpha_x_scan_table_ holds the location of where we are currently 
+    // searching for the root)
+    if (alpha_x_scan_table_[n] == 0) { 
             if (n > 0)
             {
                 alpha_x_scan_table_[n] = ( this->alphaTable[n-1][0] ); 
             }
     }
 
-    // Define new interval as between x1=offset ("low") and x2=(offset+interval)
-    // ("high"). Make sure "low" is > 0.
+    // Define new first interval as between x1=offset ("low") and 
+    // x2=(offset+interval) ("high"). Make sure "low" is > 0.
     low = alpha_x_scan_table_[n];
     high = alpha_x_scan_table_[n] + interval;	
     if (low <= 0) // TODO this check should be redundant
@@ -525,17 +577,21 @@ const void GreensFunction2DRadAbs::GiveRootInterval(
     }
     
     // When above loop has finished, low and high have values inbetween which
-    // a root of the alpha function should lie have been found. Make sure that 
-    // scanning for the next root starts at the end of the domain [low, high] 
-    // found here.
+    // a root of the alpha function should lie have been found. Here it is made 
+    // sure that scanning for the next root starts at the end of the last domain 
+    // [low, high] evaluated here.
     alpha_x_scan_table_[n] = high;
     
     return;
 }
 
-
-// Simply returns an interval based upon previous root, estimated interval 
-// inbetween roots and INTERVAL_MARGIN (see .hpp).
+// Above function is a more advanced function to find an interval where a 
+// root lies. But it is known that f(alpha)_n converges to steady oscillatory
+// behaviour for which the root intervals can be estimated very precisely.
+//      Thus this function also returns an interval where a root lies, but here
+// this interval is determined based upon a very simple estimate.
+// (Based upon the previous root, the estimated interval inbetween roots 
+// and INTERVAL_MARGIN (see .hpp). 
 const void GreensFunction2DRadAbs::GiveRootIntervalSimple(
             Real& low,          // Variable to return left boundary interval
             Real& high,         // Variable to return right boundary interval
@@ -544,6 +600,7 @@ const void GreensFunction2DRadAbs::GiveRootIntervalSimple(
 {
     // Offset is simply based on previous root, the interval in which the first 
     // root (i=0) lies is never calculated with this function.
+    // TODO: perhaps add a check if i>1?
     const Real previous_root (getAlpha(n, i-1));
 
     // get estimated interval
@@ -561,8 +618,9 @@ const void GreensFunction2DRadAbs::GiveRootIntervalSimple(
 }
 
 
-// This function calls the GSL root finder, for roots for which n = 0. (This is
-// a special case for which the function simplifies.)
+// This function calls the GSL root finder, for roots for which the order of 
+// f(alpha)_n is 0 (n = 0). (This is a special case for which the function 
+// simplifies.)
 const Real 
 GreensFunction2DRadAbs::getAlphaRoot0( const Real low,  // root lies between low
                                        const Real high  // .. and high 
@@ -598,8 +656,9 @@ GreensFunction2DRadAbs::getAlphaRoot0( const Real low,  // root lies between low
 }    
 
 
-// This function calls the GSL root finder, for roots for which n > 0. (n = 0 is
-// a special case for which the function simplifies.)
+// This function calls the GSL root finder, for roots for which the order of 
+// f(alpha)_n, n, is greater than 0. (n = 0 is a special case for which the 
+// function simplifies.)
 const Real 
 GreensFunction2DRadAbs::getAlphaRootN( const Real low,  // root lies between low
                                        const Real high, // .. and high 
@@ -632,7 +691,11 @@ GreensFunction2DRadAbs::getAlphaRootN( const Real low,  // root lies between low
 
 
 // Simply calls the correct function to call the rootfinder (either 
-// getAlphaRoot0 or getAlphaRootN).
+// getAlphaRoot0 or getAlphaRootN). (Since for f(alpha)_n, with n=0 or
+// n>0 are two different cases; see comment with getAlphaRoot0 and 
+// getAlphaRootN.)
+// The interval is determined in the rest of the algorithm, and should only 
+// contain one root.
 const Real 
 GreensFunction2DRadAbs::getAlphaRoot( const Real low,   // root lies between low
                                       const Real high,  // .. and high 
@@ -642,9 +705,11 @@ GreensFunction2DRadAbs::getAlphaRoot( const Real low,   // root lies between low
   
     Real alpha;
 
+    // n = 0
     if (n == 0) {
         alpha = getAlphaRoot0(low, high);
     } else {
+    // n > 0
         alpha = getAlphaRootN(low, high, n);
     }
 
@@ -654,12 +719,17 @@ GreensFunction2DRadAbs::getAlphaRoot( const Real low,   // root lies between low
 
 // Subfunction of getAlpha
 // 
-// The function just counts the number of times the root lies in the interval 
-// that can be used to estimate the next root. If this happens enough, then it
-// edits alpha_correctly_estimated_ to a negative value to signify that it can 
+// It is known that a certain point the roots converge to lie at a constant
+// distance. Therefore, each time a root is found, it is checked wether 
+// it lies at a constant distance (+/- margin) of the previous root. If this
+// is the case often enough, the function set a flag (i.e.
+// sets alpha_x_scan_table_ to a negative value) to signify that it can 
 // be assumed that for all next roots the distance inbetween roots will
-// equal the interval +/- margin.
-// TODO: This could be more sophisticated.
+// equal the interval +/- margin. In this latter case a simpler function
+// to find the next root can be used; see below.
+// TODO: Perhaps this can be done more sophisticatedly? This is however hard
+// since the difference with the constant estimates doesn't show a consistent
+// pattern.
 const void GreensFunction2DRadAbs::decideOnMethod2(size_t n, 
                                                   RealVector::size_type i
                                                   ) const
@@ -668,20 +738,24 @@ const void GreensFunction2DRadAbs::decideOnMethod2(size_t n,
     // it can't do anything if i = 0.
     if (i > 0) { 
 
+        // get the distance between root i and the previous one, i-1
         const Real dx(getAlpha(n, i)-getAlpha(n, i-1)); // note the recursiveness!
+
+        // calculate what that distance would have been if the roots would
+        // be at constant distance.
         const Real estimated_alpha_root_distance_( this->getestimated_alpha_root_distance_() );
 
         // If the relative deviation from the expected difference is smaller 
-        // than the expected margin, increase number of would-be correct 
+        // than a margin, increase number of would-have-been correct 
         // guesses.
         if (fabs(1-dx/estimated_alpha_root_distance_) < INTERVAL_MARGIN) {
             ++alpha_correctly_estimated_[n];            
         } else {
-            alpha_correctly_estimated_[n] = 0;
+            alpha_correctly_estimated_[n] = 0; //otherwise reset counter
         }   
         
         // If guessing would have worked for last CONVERGENCE_ASSUMED roots, 
-        // assume it will for all following roots.
+        // assume it will work for all following roots.
         if (alpha_correctly_estimated_[n] > CONVERGENCE_ASSUMED) {
             alpha_x_scan_table_[n] = -2; // permanently switch
         }
@@ -692,9 +766,9 @@ const void GreensFunction2DRadAbs::decideOnMethod2(size_t n,
 
 
 // This function searches for roots (y=0) of the so-called alpha-function 
-// (::f_alpha()). It either moves a small search interval along the x-axis to
-// check for sign-change (which would indicate a root), and calls the GSL
-// root finder, or directly calls the root finder if the spacing between 
+// (::f_alpha(), or f(alpha)_n). It either moves a small search interval along 
+// the x-axis to check for sign-change (which indicates a root), and calls 
+// the GSL root finder, or directly calls the root finder if the spacing between 
 // roots is found to be converged. 
 const Real GreensFunction2DRadAbs::getAlpha( size_t n,               // order
                                             RealVector::size_type i // ith root
@@ -705,9 +779,7 @@ const Real GreensFunction2DRadAbs::getAlpha( size_t n,               // order
     Real current_root_, low, high;   
     
     // # "Administration"
-    // Equals reading/writing to/from alphaTable to reading/writing from/to to 
-    // this->alphaTable[n]; n being the order of the Bessel function. 
-    // (Funky pointer operations.)
+    // Creates pointer alphaTable, which points to alphaTable[n].
     RealVector& alphaTable( this->alphaTable[n] );		        
     
     // Gets it's size 
@@ -715,7 +787,7 @@ const Real GreensFunction2DRadAbs::getAlpha( size_t n,               // order
 
     // # Expansion of root table
     
-    // If doesn't contain requested value, expand table until value
+    // If doesn't contain requested root, expand table until requested root
     if( i >= oldSize )
     {
         // Expand the table, temporarily fill with zeroes
@@ -774,7 +846,7 @@ const Real GreensFunction2DRadAbs::getAlpha( size_t n,               // order
 }
 
 // =============================================================================
-// End modification
+// End root-related functions
 // =============================================================================
 
 
@@ -834,8 +906,9 @@ GreensFunction2DRadAbs::p_int_r_i_exp_table( const unsigned int i,
 }
 
 
-// This tries to guess the maximum number of n iterations it needs for calculating the survival probability
-// Not really sure yet how this works
+// This tries to guess the maximum number of n iterations it needs for 
+// calculating the survival probability
+// TODO: Add comments
 const unsigned int
 GreensFunction2DRadAbs::guess_maxi( const Real t ) const
 {
@@ -869,8 +942,8 @@ GreensFunction2DRadAbs::guess_maxi( const Real t ) const
 
 
 // Calculates the survival probability at a given time.
-// This is a little wrapper for the p_survival_table so that you can easily calculate the survival probability
-// at a given time
+// This is a little wrapper for the p_survival_table so that you can easily 
+// calculate the survival probability at a given time
 const Real 
 GreensFunction2DRadAbs::p_survival( const Real t) const
 {
@@ -883,9 +956,10 @@ GreensFunction2DRadAbs::p_survival( const Real t) const
 }
 
 
-// This actually calculates the Survival probability at time t given the particle was at r0 at time 0
-// It uses the pSurvTable for efficiency (so you don't have to calculate all the constant factors all
-// the time)
+// This actually calculates the Survival probability at time t given the 
+// particle was at r0 at time 0. It uses the pSurvTable for efficiency (so 
+// you don't have to calculate all the constant factors all the time during
+// the root finding of this function.)
 const Real 
 GreensFunction2DRadAbs::p_survival_table( const        Real t,
                                           RealVector&  psurvTable ) const
@@ -905,9 +979,8 @@ GreensFunction2DRadAbs::p_survival_table( const        Real t,
         IGNORE_RETURN getAlpha( 0, maxi );       // this updates the table of roots
             this->createPsurvTable( psurvTable); // then the table is filled with data
     }
-    // A sum over terms is performed, where convergence is assumed. It is not 
-    // clear if this is a just assumption.
-    // TODO!
+    // A sum over terms is performed, where convergence is assumed. 
+    // TODO: It is not clear if this is a just assumption.
     p = funcSum_all( boost::bind( &GreensFunction2DRadAbs::p_survival_i_exp_table,
                                   this,
                                   _1, t, psurvTable ),
@@ -1105,24 +1178,25 @@ GreensFunction2DRadAbs::drawEventType( const Real rnd,
                                        const Real t     ) const
 {
   
-    const Real D( this->getD() );
-    const Real sigma( this->getSigma() );
-    const Real kf( this->getkf() );
-    const Real a( this->geta() );
-    const Real r0( this->getr0() );
+    const Real D( this->getD() );           // Diffusion constant
+    const Real sigma( this->getSigma() );   // Inner boundary
+    const Real kf( this->getkf() );         // Reaction rate constant
+    const Real a( this->geta() );           // Outer boundary
+    const Real r0( this->getr0() );         // Initial position particle (vector)
 
     THROW_UNLESS( std::invalid_argument, 0 <= rnd && rnd < 1.0 );
     THROW_UNLESS( std::invalid_argument, sigma <= r0 && r0 < a );
     THROW_UNLESS( std::invalid_argument, t > 0.0 );
 
-    if( kf == 0.0 ) // if there cannot be any flow through the radiating boundary it is always an escape
+    if( kf == 0.0 ) // if there cannot be any flow through the radiating 
+                    // boundary it is always an escape
     {
         return IV_ESCAPE;
     }
     
     // First, check if r0 is close only either to a or sigma relative
     // to Dt.  In such cases, the event type is always ESCAPE or REACTION,
-    // respectively.   This avoids numerical instability in calculating
+    // respectively.  This avoids numerical instability in calculating
     // leavea() and/or leaves().
 
     // Here, use a rather large threshold for safety.
@@ -1147,8 +1221,8 @@ GreensFunction2DRadAbs::drawEventType( const Real rnd,
         }
     }
 
-    const Real reaction( leaves( t ) );	// flux through rad boundary
-    const Real escape( leavea( t ) );	// flux through abs boundary
+    const Real reaction( leaves( t ) );	// flux through rad boundary (inner)
+    const Real escape( leavea( t ) );	// flux through abs boundary (outer)
     const Real value( reaction / ( reaction + escape ) );
 
     if( rnd <= value )  
@@ -1184,14 +1258,16 @@ Real GreensFunction2DRadAbs::drawR( const Real rnd,
     const Real psurv( p_survival( t ) ); // calculate the survival probability at this time
                                          // this is used as the normalization factor
                                          // BEWARE!!! This also produces the roots An and therefore
+                                         // Note___
                                          // SETS THE HIGHEST INDEX -> side effect
-                                         // VERY BAD PROGRAMMING PRACTICE!!
+                                         // BAD PRACTICE
 
     RealVector Y0_aAnTable;
     RealVector J0_aAnTable;
     RealVector Y0J1J0Y1Table;
     createY0J0Tables( Y0_aAnTable, J0_aAnTable, Y0J1J0Y1Table, t);
 
+    // make function presentable to root finder etc.
     p_int_r_params params = { this, t, Y0_aAnTable, J0_aAnTable, Y0J1J0Y1Table, rnd * psurv };
 
     gsl_function F = 
@@ -1266,7 +1342,8 @@ Real GreensFunction2DRadAbs::drawR( const Real rnd,
 }
 
 
-// The calculates constant factor m,n for the drawing of theta. These factors are summed later.
+// The calculates constant factor dependent on m,n for the drawing of theta. 
+// These factors are summed later.
 const Real GreensFunction2DRadAbs::p_m_alpha( const unsigned int n,
                                               const unsigned int m,
                                               const Real r,
@@ -1348,7 +1425,7 @@ GreensFunction2DRadAbs::p_m( const Integer m,
 }
 
 
-// this should make the table of constants used in the iteration for finding the root for drawTheta
+// this makes the table of constants used in the iteration for finding the root for drawTheta
 // The index of the array is consistent with the index of the summation
 void
 GreensFunction2DRadAbs::makep_mTable( RealVector& p_mTable,
@@ -1408,7 +1485,8 @@ GreensFunction2DRadAbs::makep_mTable( RealVector& p_mTable,
 }
 
 
-// This method calculates the constants for the drawTheta method when the particle is at the boundary
+// This method calculates the constants for the drawTheta method when the 
+// particle is at the boundary
 const Real 
 GreensFunction2DRadAbs::dp_m_alpha_at_a( const unsigned int n,
                                          const unsigned int m,
